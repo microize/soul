@@ -69,11 +69,36 @@ DONT ADD EMOJIS.
 - **Registration**: Successfully registered in `/packages/core/src/config/config.ts`
 - **Status**: ✅ Available in tool registry as `test_generator`
 
+## New Phase 2 Tools (Advanced Code Intelligence)
+
+### Tree-sitter Parser Tool
+- **Location**: `/packages/core/src/tools/tree-sitter.ts`
+- **Purpose**: AST-based code parsing and symbol extraction for accurate code analysis
+- **Languages**: TypeScript, JavaScript, Python with auto-detection and fallback handling
+- **Operations**: Find symbols, definitions, references, code structure, imports, functions, classes
+- **Features**: Precise symbol location, scope analysis, hierarchical symbol mapping, position tracking
+- **Output**: Detailed symbol information with line/column positions, signatures, and relationships
+- **Dependencies**: tree-sitter, tree-sitter-typescript, tree-sitter-javascript, tree-sitter-python
+- **Registration**: Successfully registered in `/packages/core/src/config/config.ts`
+- **Status**: ✅ Available in tool registry as `tree_sitter`
+
+### Code RAG Search Tool
+- **Location**: `/packages/core/src/tools/code-rag.ts`
+- **Purpose**: Semantic code search and context retrieval for intelligent code discovery
+- **Search Types**: Semantic, keyword, function, class, pattern, similarity, context search
+- **Features**: Natural language queries, code indexing, similarity search, context-aware results
+- **Languages**: TypeScript, JavaScript, Python, Java, Go, Rust, C++ with auto-detection
+- **Output**: Ranked search results with relevance scores, code snippets, and contextual information
+- **Caching**: LRU cache for embeddings and incremental index updates
+- **Registration**: Successfully registered in `/packages/core/src/config/config.ts`
+- **Status**: ✅ Available in tool registry as `code_rag`
+
 ## Tools Summary
-- **Total Tools**: 17 (increased from 11)
-- **New Tools Added**: 6 (NotebookEdit, PlanMode, TodoWrite, GitOperations, CodeAnalysis, TestGeneration)
-- **Phase 1 Complete**: High-priority development tools implemented
-- **System Impact**: Significant enhancement to developer productivity and code quality workflows
+- **Total Tools**: 19 (increased from 11)
+- **Phase 1 Tools Added**: 6 (NotebookEdit, PlanMode, TodoWrite, GitOperations, CodeAnalysis, TestGeneration)
+- **Phase 2 Tools Added**: 2 (TreeSitter, CodeRAG)
+- **Phase 1 & 2 Complete**: Comprehensive development and code intelligence tools implemented
+- **System Impact**: Major enhancement to developer productivity, code quality, and intelligent code navigation workflows
 
 ## Development & Testing Instructions
 
@@ -148,7 +173,79 @@ After implementing new tools, verify:
 - All tests pass
 
 ### Future Development Notes
-- **Phase 2 Tools**: Database operations, API testing, documentation generation
+- **Phase 3 Tools**: Database operations, API testing, documentation generation
 - **Framework Support**: Additional testing frameworks and languages
 - **Enhanced Analysis**: More sophisticated code analysis patterns
 - **Workflow Integration**: Better integration with CI/CD pipelines
+
+## Tool Usage Examples
+
+### Tree-sitter Parser Tool Examples
+```json
+// Find all functions in a file
+{
+  "operation": "find_functions",
+  "file_path": "src/components/UserProfile.tsx",
+  "include_details": true,
+  "include_positions": true
+}
+
+// Get complete code structure
+{
+  "operation": "get_structure", 
+  "file_path": "src/services/authService.ts",
+  "language": "typescript"
+}
+
+// Find specific symbol definition
+{
+  "operation": "find_definitions",
+  "file_path": "src/utils/helpers.js",
+  "symbol_name": "validateEmail"
+}
+```
+
+### Code RAG Search Tool Examples
+```json
+// Semantic search for authentication code
+{
+  "search_type": "semantic",
+  "query": "user authentication and login validation",
+  "search_path": "src/",
+  "max_results": 5,
+  "include_context": true
+}
+
+// Find functions by name pattern
+{
+  "search_type": "function",
+  "query": "handle",
+  "languages": ["typescript", "javascript"],
+  "min_score": 0.5
+}
+
+// Similarity search based on reference file
+{
+  "search_type": "similar",
+  "query": "find similar components",
+  "reference_file": "src/components/Button.tsx",
+  "include_related": true
+}
+
+// Pattern-based search using regex
+{
+  "search_type": "pattern", 
+  "query": "useEffect\\(.*\\[\\]\\)",
+  "search_path": "src/hooks/",
+  "max_results": 10
+}
+```
+
+### Integration with Existing Tools
+- **GrepTool**: Text-based search for exact matches
+- **TreeSitterTool**: AST-based symbol extraction and analysis  
+- **CodeRAGTool**: Semantic search and context retrieval
+- **CodeAnalysisTool**: Code quality and complexity analysis
+- **GlobTool**: File pattern discovery for large codebases
+
+These tools work together to provide comprehensive code understanding from text search to semantic analysis.

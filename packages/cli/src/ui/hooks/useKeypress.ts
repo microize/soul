@@ -79,11 +79,17 @@ export function useKeypress(
       }
     };
 
-    readline.emitKeypressEvents(stdin, rl);
-    stdin.on('keypress', handleKeypress);
+    // Add safety check before setting up keypress events
+    if (stdin && typeof stdin.on === 'function') {
+      readline.emitKeypressEvents(stdin, rl);
+      stdin.on('keypress', handleKeypress);
+    }
 
     return () => {
-      stdin.removeListener('keypress', handleKeypress);
+      // Add safety check for cleanup
+      if (stdin && typeof stdin.removeListener === 'function') {
+        stdin.removeListener('keypress', handleKeypress);
+      }
       rl.close();
       setRawMode(false);
 

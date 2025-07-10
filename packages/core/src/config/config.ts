@@ -33,6 +33,8 @@ import { TodoWriteTool } from '../tools/todo-write.js';
 import { GitOperationsTool } from '../tools/git-operations.js';
 import { CodeAnalysisTool } from '../tools/code-analysis.js';
 import { TestGenerationTool } from '../tools/test-generation.js';
+import { TreeSitterTool } from '../tools/tree-sitter.js';
+import { CodeRAGTool } from '../tools/code-rag.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -548,6 +550,8 @@ export class Config {
     registerCoreTool(GitOperationsTool, this);
     registerCoreTool(CodeAnalysisTool, this);
     registerCoreTool(TestGenerationTool, this);
+    registerCoreTool(TreeSitterTool, this);
+    registerCoreTool(CodeRAGTool, this);
 
     await registry.discoverTools();
     return registry;
