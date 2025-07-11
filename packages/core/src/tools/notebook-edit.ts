@@ -242,7 +242,7 @@ export class NotebookEditTool extends BaseTool<
 
   async shouldConfirmExecute(
     params: NotebookEditToolParams,
-    abortSignal: AbortSignal
+    _abortSignal: AbortSignal
   ): Promise<ToolCallConfirmationDetails | false> {
     if (this.config.getApprovalMode() === ApprovalMode.AUTO_EDIT) {
       return false;

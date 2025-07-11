@@ -398,7 +398,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
       for (const filePath of files) {
         try {
           await this.indexFile(filePath);
-        } catch (error) {
+        } catch (_error) {
           // Skip files that can't be read or parsed
           continue;
         }
@@ -511,7 +511,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const queryTerms = this.extractSemanticTerms(params.query);
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       const semanticScore = this.calculateSemanticRelevance(queryTerms, entry);
       
       if (semanticScore > (params.min_score || 0.2)) {
@@ -559,6 +559,9 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
         case 'handle':
         case 'handler':
           expandedTerms.push('handle', 'handler', 'process', 'manage');
+          break;
+        default:
+          // No expansion for other terms
           break;
       }
     }
@@ -633,7 +636,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const query = params.query.toLowerCase();
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       if (entry.metadata.functionName && 
           entry.metadata.functionName.toLowerCase().includes(query)) {
         
@@ -654,7 +657,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const query = params.query.toLowerCase();
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       if (entry.metadata.className && 
           entry.metadata.className.toLowerCase().includes(query)) {
         
@@ -686,7 +689,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const refKeywords = this.extractKeywords(referenceContent);
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       if (entry.filePath === refPath) continue; // Skip same file
       
       const similarity = this.calculateSimilarity(refKeywords, entry.content);
@@ -713,7 +716,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const pattern = new RegExp(params.query, 'gi');
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       const matches = entry.content.match(pattern);
       if (matches) {
         const snippet = this.indexEntryToCodeSnippet(entry);
@@ -733,7 +736,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     const results: SearchResult[] = [];
     const keywords = params.query.toLowerCase().split(/\s+/);
     
-    for (const [id, entry] of this.codeIndex) {
+    for (const [_id, entry] of this.codeIndex) {
       const content = entry.content.toLowerCase();
       let score = 0;
       let matches = 0;
@@ -827,13 +830,16 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
         case CodeLanguage.CPP:
           patterns.push('**/*.{cpp,cc,cxx,h,hpp}');
           break;
+        default:
+          // Unknown language, skip
+          break;
       }
     }
     
     return patterns;
   }
 
-  private isCodeBlockStart(line: string, language: CodeLanguage): boolean {
+  private isCodeBlockStart(line: string, _language: CodeLanguage): boolean {
     const functionPatterns = [
       /^(export\s+)?(async\s+)?function\s+\w+/,
       /^(export\s+)?const\s+\w+\s*=.*=>/,
@@ -847,11 +853,11 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     return functionPatterns.some(pattern => pattern.test(line));
   }
 
-  private isFunctionStart(line: string, language: CodeLanguage): boolean {
+  private isFunctionStart(line: string, _language: CodeLanguage): boolean {
     return /^(export\s+)?(async\s+)?function\s+\w+|^(export\s+)?const\s+\w+\s*=.*=>|^def\s+\w+/.test(line);
   }
 
-  private isClassStart(line: string, language: CodeLanguage): boolean {
+  private isClassStart(line: string, _language: CodeLanguage): boolean {
     return /^(export\s+)?(default\s+)?class\s+\w+|^class\s+\w+/.test(line);
   }
 
@@ -897,7 +903,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
   private extractKeywords(content: string): string[] {
     // Extract meaningful keywords from code
     const words = content
-      .replace(/[{}();,\[\]]/g, ' ')
+      .replace(/[{}();,[\]]/g, ' ')
       .split(/\s+/)
       .filter(word => word.length > 2 && /^[a-zA-Z]/.test(word))
       .map(word => word.toLowerCase());

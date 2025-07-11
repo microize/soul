@@ -202,6 +202,7 @@ class TaskAgent {
           name: 'ls',
           args: { path: this.state.config.targetDir },
           isClientInitiated: false,
+          prompt_id: 'task-agent-' + Date.now(),
         },
         this.state.toolRegistry,
       );
