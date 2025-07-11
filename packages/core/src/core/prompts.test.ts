@@ -28,80 +28,80 @@ vi.mock('../utils/gitUtils', () => ({
 }));
 
 describe('Core System Prompt (prompts.ts)', () => {
-  it('should return the base prompt when no userMemory is provided', () => {
+  it('should return the base prompt when no userMemory is provided', async () => {
     vi.stubEnv('SANDBOX', undefined);
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).not.toContain('---\n\n'); // Separator should not be present
     expect(prompt).toContain('You are an interactive CLI agent'); // Check for core content
     expect(prompt).toMatchSnapshot(); // Use snapshot for base prompt structure
   });
 
-  it('should return the base prompt when userMemory is empty string', () => {
+  it('should return the base prompt when userMemory is empty string', async () => {
     vi.stubEnv('SANDBOX', undefined);
-    const prompt = getCoreSystemPrompt('');
+    const prompt = await getCoreSystemPrompt('');
     expect(prompt).not.toContain('---\n\n');
     expect(prompt).toContain('You are an interactive CLI agent');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should return the base prompt when userMemory is whitespace only', () => {
+  it('should return the base prompt when userMemory is whitespace only', async () => {
     vi.stubEnv('SANDBOX', undefined);
-    const prompt = getCoreSystemPrompt('   \n  \t ');
+    const prompt = await getCoreSystemPrompt('   \n  \t ');
     expect(prompt).not.toContain('---\n\n');
     expect(prompt).toContain('You are an interactive CLI agent');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should append userMemory with separator when provided', () => {
+  it('should append userMemory with separator when provided', async () => {
     vi.stubEnv('SANDBOX', undefined);
     const memory = 'This is custom user memory.\nBe extra polite.';
     const expectedSuffix = `\n\n---\n\n${memory}`;
-    const prompt = getCoreSystemPrompt(memory);
+    const prompt = await getCoreSystemPrompt(memory);
 
     expect(prompt.endsWith(expectedSuffix)).toBe(true);
     expect(prompt).toContain('You are an interactive CLI agent'); // Ensure base prompt follows
     expect(prompt).toMatchSnapshot(); // Snapshot the combined prompt
   });
 
-  it('should include sandbox-specific instructions when SANDBOX env var is set', () => {
+  it('should include sandbox-specific instructions when SANDBOX env var is set', async () => {
     vi.stubEnv('SANDBOX', 'true'); // Generic sandbox value
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).toContain('# Sandbox');
     expect(prompt).not.toContain('# MacOS Seatbelt');
     expect(prompt).not.toContain('# Outside of Sandbox');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should include seatbelt-specific instructions when SANDBOX env var is "sandbox-exec"', () => {
+  it('should include seatbelt-specific instructions when SANDBOX env var is "sandbox-exec"', async () => {
     vi.stubEnv('SANDBOX', 'sandbox-exec');
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).toContain('# MacOS Seatbelt');
     expect(prompt).not.toContain('# Sandbox');
     expect(prompt).not.toContain('# Outside of Sandbox');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should include non-sandbox instructions when SANDBOX env var is not set', () => {
+  it('should include non-sandbox instructions when SANDBOX env var is not set', async () => {
     vi.stubEnv('SANDBOX', undefined); // Ensure it's not set
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).toContain('# Outside of Sandbox');
     expect(prompt).not.toContain('# Sandbox');
     expect(prompt).not.toContain('# MacOS Seatbelt');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should include git instructions when in a git repo', () => {
+  it('should include git instructions when in a git repo', async () => {
     vi.stubEnv('SANDBOX', undefined);
     vi.mocked(isGitRepository).mockReturnValue(true);
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).toContain('# Git Repository');
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should not include git instructions when not in a git repo', () => {
+  it('should not include git instructions when not in a git repo', async () => {
     vi.stubEnv('SANDBOX', undefined);
     vi.mocked(isGitRepository).mockReturnValue(false);
-    const prompt = getCoreSystemPrompt();
+    const prompt = await getCoreSystemPrompt();
     expect(prompt).not.toContain('# Git Repository');
     expect(prompt).toMatchSnapshot();
   });

@@ -185,6 +185,9 @@ describe('Gemini Client (client.ts)', () => {
       return mock as unknown as Config;
     });
 
+    // Mock the prompts module to return a Promise
+    vi.mocked(getCoreSystemPrompt).mockResolvedValue('Mock system prompt');
+
     // We can instantiate the client here since Config is mocked
     // and the constructor will use the mocked GoogleGenAI
     const mockConfig = new Config({} as never);
@@ -329,7 +332,7 @@ describe('Gemini Client (client.ts)', () => {
         model: 'test-model',
         config: {
           abortSignal,
-          systemInstruction: getCoreSystemPrompt(''),
+          systemInstruction: 'Mock system prompt',
           temperature: 0.5,
           topP: 1,
         },
@@ -357,7 +360,7 @@ describe('Gemini Client (client.ts)', () => {
         model: 'test-model', // Should use current model from config
         config: {
           abortSignal,
-          systemInstruction: getCoreSystemPrompt(''),
+          systemInstruction: 'Mock system prompt',
           temperature: 0,
           topP: 1,
           responseSchema: schema,
