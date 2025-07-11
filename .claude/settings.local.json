@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)",
+      "Bash(npm install)",
+      "Bash(rg:*)",
+      "Bash(timeout 10s npm start -- --help)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx eslint:*)"
+    ],
+    "deny": []
+  }
+}
