@@ -10,7 +10,9 @@
       "Bash(npm run:*)",
       "Bash(npm install)",
       "Bash(rg:*)",
-      "Bash(timeout 10s npm start -- --help)"
+      "Bash(timeout 10s npm start -- --help)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }

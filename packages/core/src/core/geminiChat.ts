@@ -396,7 +396,12 @@ export class GeminiChat {
       const durationMs = Date.now() - startTime;
       this._logApiError(durationMs, error);
       this.sendPromise = Promise.resolve();
-      throw error;
+      // Instead of throwing, return a generator that throws.
+      // This ensures the consumer of the stream can handle the error
+      // within their for-await-of loop.
+      return (async function* () {
+        throw error;
+      })();
     }
   }
 

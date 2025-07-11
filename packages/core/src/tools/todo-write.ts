@@ -19,6 +19,7 @@ export interface TodoItem {
   content: string;
   status: 'pending' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
+  step?: number;
   created?: string;
   updated?: string;
 }
@@ -32,6 +33,7 @@ export interface TodoDisplayItem {
   task: string;
   status: 'pending' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
+  step?: number;
 }
 
 /**
@@ -94,6 +96,10 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
                   type: Type.STRING,
                   description: 'Optional last update timestamp in ISO format.',
                 },
+                step: {
+                  type: Type.NUMBER,
+                  description: 'Optional step number for sequential task ordering.',
+                },
               },
               required: ['id', 'content', 'status', 'priority'],
             },
@@ -123,6 +129,7 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
       task: todo.content,
       status: todo.status,
       priority: todo.priority,
+      step: todo.step,
     };
   }
 
@@ -147,6 +154,34 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
     return `${total} total items${parts.length > 0 ? ` (${parts.join(', ')})` : ''}`;
   }
 
+  /**
+   * Generates formatted display output with step ordering and strikethrough
+   */
+  private generateFormattedDisplay(todos: TodoItem[]): string {
+    // Sort todos by step number, putting items without steps at the end
+    const sortedTodos = todos.sort((a, b) => {
+      if (a.step === undefined && b.step === undefined) return 0;
+      if (a.step === undefined) return 1;
+      if (b.step === undefined) return -1;
+      return a.step - b.step;
+    });
+
+    const now = new Date().toLocaleString();
+    let output = `# Todo List (Updated: ${now})\n\n`;
+
+    // Simple checkbox format for all todos
+    for (const todo of sortedTodos) {
+      const checkbox = todo.status === 'completed' ? '[x]' : '[ ]';
+      const content = todo.status === 'completed' 
+        ? `~~${todo.content}~~` 
+        : todo.content;
+      
+      output += `${checkbox} ${content} (${todo.status})\n`;
+    }
+
+    return output;
+  }
+
   validateToolParams(params: TodoWriteToolParams): string | null {
     const errors = SchemaValidator.validate(this.schema.parameters, params);
     if (errors) {
@@ -169,6 +204,19 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
       }
       if (!['low', 'medium', 'high'].includes(todo.priority)) {
         return 'Each todo item must have a valid priority (low, medium, high)';
+      }
+      if (todo.step !== undefined && (typeof todo.step !== 'number' || todo.step < 1)) {
+        return 'Step must be a positive number if provided';
+      }
+    }
+
+    // Validate step uniqueness if steps are provided
+    const stepsProvided = params.todos.filter(todo => todo.step !== undefined);
+    if (stepsProvided.length > 0) {
+      const stepNumbers = stepsProvided.map(todo => todo.step!);
+      const uniqueSteps = new Set(stepNumbers);
+      if (uniqueSteps.size !== stepNumbers.length) {
+        return 'Step numbers must be unique when provided';
       }
     }
 
@@ -198,8 +246,28 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
       const todoFilePath = this.getTodoFilePath();
       const now = new Date().toISOString();
 
+      // Auto-assign steps if some todos have steps but others don't
+      let processedTodos = [...params.todos];
+      const hasAnySteps = processedTodos.some(todo => todo.step !== undefined);
+      const hasAllSteps = processedTodos.every(todo => todo.step !== undefined);
+      
+      if (hasAnySteps && !hasAllSteps) {
+        // Find the highest existing step number
+        const maxStep = Math.max(...processedTodos
+          .filter(todo => todo.step !== undefined)
+          .map(todo => todo.step!));
+        
+        let nextStep = maxStep + 1;
+        processedTodos = processedTodos.map(todo => {
+          if (todo.step === undefined) {
+            return { ...todo, step: nextStep++ };
+          }
+          return todo;
+        });
+      }
+
       // Add timestamps to todos
-      const todosWithTimestamps = params.todos.map(todo => ({
+      const todosWithTimestamps = processedTodos.map(todo => ({
         ...todo,
         created: todo.created || now,
         updated: now,
@@ -211,12 +279,12 @@ export class TodoWriteTool extends BaseTool<TodoWriteToolParams, TodoWriteToolRe
       // Convert to display format
       const displayTodos = todosWithTimestamps.map(todo => this.toDisplayItem(todo));
 
-      // Generate summary
-      const summary = this.generateStatusSummary(todosWithTimestamps);
+      // Generate enhanced formatted display
+      const formattedDisplay = this.generateFormattedDisplay(todosWithTimestamps);
 
       return {
         llmContent: 'Todo list updated successfully',
-        returnDisplay: `Todo list updated successfully. ${summary}.`,
+        returnDisplay: formattedDisplay,
         updated_todos: displayTodos,
       };
     } catch (error) {
