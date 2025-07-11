@@ -84,6 +84,8 @@ export function useKeypress(
 
     return () => {
       stdin.removeListener('keypress', handleKeypress);
+      rl.close();
+      setRawMode(false);
 
       // If we are in the middle of a paste, send what we have.
       if (isPaste) {
