@@ -79,19 +79,11 @@ export function useKeypress(
       }
     };
 
-    // Add safety check before setting up keypress events
-    if (stdin && typeof stdin.on === 'function') {
-      readline.emitKeypressEvents(stdin, rl);
-      stdin.on('keypress', handleKeypress);
-    }
+    readline.emitKeypressEvents(stdin, rl);
+    stdin.on('keypress', handleKeypress);
 
     return () => {
-      // Add safety check for cleanup
-      if (stdin && typeof stdin.removeListener === 'function') {
-        stdin.removeListener('keypress', handleKeypress);
-      }
-      rl.close();
-      setRawMode(false);
+      stdin.removeListener('keypress', handleKeypress);
 
       // If we are in the middle of a paste, send what we have.
       if (isPaste) {
