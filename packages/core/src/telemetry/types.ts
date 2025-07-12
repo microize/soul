@@ -48,6 +48,7 @@ export class StartSessionEvent {
   telemetry_enabled: boolean;
   telemetry_log_user_prompts_enabled: boolean;
   file_filtering_respect_git_ignore: boolean;
+  secret_tracking_enabled: boolean;
 
   constructor(config: Config) {
     const generatorConfig = config.getContentGeneratorConfig();
@@ -76,6 +77,8 @@ export class StartSessionEvent {
       config.getTelemetryLogPromptsEnabled();
     this.file_filtering_respect_git_ignore =
       config.getFileFilteringRespectGitIgnore();
+    this.secret_tracking_enabled = config.isSecretTrackingEnabled();
+    this['event.timestamp'] = new Date().toISOString();
   }
 }
 
@@ -221,6 +224,22 @@ export class ApiResponseEvent {
   }
 }
 
+export class SecretTrackingEvent {
+  'event.name': 'secret_tracking_toggle';
+  'event.timestamp': string; // ISO 8601
+  enabled: boolean;
+  trigger: 'startup' | 'command' | 'environment' | 'config';
+  session_id: string;
+
+  constructor(enabled: boolean, trigger: 'startup' | 'command' | 'environment' | 'config', sessionId: string) {
+    this['event.name'] = 'secret_tracking_toggle';
+    this['event.timestamp'] = new Date().toISOString();
+    this.enabled = enabled;
+    this.trigger = trigger;
+    this.session_id = sessionId;
+  }
+}
+
 export type TelemetryEvent =
   | StartSessionEvent
   | EndSessionEvent
@@ -228,4 +247,5 @@ export type TelemetryEvent =
   | ToolCallEvent
   | ApiRequestEvent
   | ApiErrorEvent
-  | ApiResponseEvent;
+  | ApiResponseEvent
+  | SecretTrackingEvent;

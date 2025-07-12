@@ -19,6 +19,7 @@ import {
   ToolCallEvent,
   ToolConfirmationPayload,
 } from '../index.js';
+import { SecretTracker } from '../utils/secretTracker.js';
 import { Part, PartListUnion } from '@google/genai';
 import { getResponseTextFromParts } from '../utils/generateContentResponseUtilities.js';
 import {
@@ -644,6 +645,9 @@ export class CoreToolScheduler {
               }
             : undefined;
 
+        // Record tool call start for secret tracking
+        const startTime = Date.now();
+        
         scheduledCall.tool
           .execute(scheduledCall.request.args, signal, liveOutputCallback)
           .then((toolResult: ToolResult) => {
@@ -652,6 +656,14 @@ export class CoreToolScheduler {
                 callId,
                 'cancelled',
                 'User cancelled tool execution.',
+              );
+              
+              // Secret tracking: Record cancelled tool call
+              this.recordToolCallForSecretTracking(
+                scheduledCall.request,
+                undefined,
+                'User cancelled tool execution.',
+                Date.now() - startTime
               );
               return;
             }
@@ -668,9 +680,26 @@ export class CoreToolScheduler {
               resultDisplay: toolResult.returnDisplay,
               error: undefined,
             };
+            
+            // Secret tracking: Record successful tool call
+            this.recordToolCallForSecretTracking(
+              scheduledCall.request,
+              toolResult,
+              undefined,
+              Date.now() - startTime
+            );
+            
             this.setStatusInternal(callId, 'success', successResponse);
           })
           .catch((executionError: Error) => {
+            // Secret tracking: Record error tool call
+            this.recordToolCallForSecretTracking(
+              scheduledCall.request,
+              undefined,
+              executionError.message,
+              Date.now() - startTime
+            );
+            
             this.setStatusInternal(
               callId,
               'error',
@@ -712,6 +741,43 @@ export class CoreToolScheduler {
   private notifyToolCallsUpdate(): void {
     if (this.onToolCallsUpdate) {
       this.onToolCallsUpdate([...this.toolCalls]);
+    }
+  }
+
+  /**
+   * Record tool call details for secret interaction tracking
+   * @private
+   */
+  private recordToolCallForSecretTracking(
+    request: ToolCallRequestInfo,
+    result?: ToolResult,
+    error?: string,
+    duration?: number
+  ): void {
+    const secretTracker = SecretTracker.getInstance();
+    if (!secretTracker?.isEnabled()) {
+      return;
+    }
+
+    // Try to find the current interaction ID from the prompt_id
+    // This assumes we can derive the interaction ID from the request context
+    const parentInteractionId = request.prompt_id?.split('########')[0];
+    if (!parentInteractionId) {
+      return;
+    }
+
+    try {
+      void secretTracker.recordToolCall(
+        parentInteractionId,
+        request.name,
+        request.args,
+        result,
+        error,
+        duration
+      );
+    } catch (trackingError) {
+      // Silent failure for secret tracking
+      console.debug('Secret tracking error in recordToolCall:', trackingError);
     }
   }
 }

@@ -62,6 +62,8 @@ import {
   StartupProgressCallback, 
   StartupPhase 
 } from '../utils/startupProgress.js';
+import { SecretTracker, SecretTrackingConfig } from '../utils/secretTracker.js';
+import { logSecretTracking, SecretTrackingEvent } from '../telemetry/index.js';
 
 export enum ApprovalMode {
   DEFAULT = 'default',
@@ -168,6 +170,7 @@ export interface ConfigParameters {
     enableFileHashing?: boolean;
   };
   startupProgressCallback?: StartupProgressCallback;
+  secretTracking?: SecretTrackingConfig;
 }
 
 export class Config {
@@ -213,6 +216,7 @@ export class Config {
   flashFallbackHandler?: FlashFallbackHandler;
   private quotaErrorOccurred: boolean = false;
   private startupProgressManager: StartupProgressManager;
+  private readonly secretTrackingConfig: SecretTrackingConfig;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -263,6 +267,19 @@ export class Config {
       ? new StartupProgressManager(params.startupProgressCallback)
       : StartupProgressManager.createSilent();
 
+    // Initialize secret tracking configuration
+    // Check environment variable first, then params, with secure defaults
+    const envSecretTracking = process.env.SOUL_SECRET_TRACKING?.toLowerCase();
+    const isEnabledFromEnv = envSecretTracking === 'true' || envSecretTracking === '1';
+    
+    this.secretTrackingConfig = {
+      enabled: isEnabledFromEnv || (params.secretTracking?.enabled ?? true), // Default to true
+      outputDirectory: params.secretTracking?.outputDirectory,
+      maxFileSize: params.secretTracking?.maxFileSize || 50, // 50MB default
+      maxDays: params.secretTracking?.maxDays || 30, // 30 days default
+      bufferSize: params.secretTracking?.bufferSize || 10, // 10 interactions default
+    };
+
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
     }
@@ -300,6 +317,29 @@ export class Config {
     }
 
     this.startupProgressManager.updateProgress('Preparing tool registry', 60);
+    
+    // Initialize secret tracking if enabled
+    if (this.secretTrackingConfig.enabled) {
+      this.startupProgressManager.updateProgress('Setting up secret tracking', 80);
+      try {
+        const secretTracker = SecretTracker.getInstance(this.sessionId, this.secretTrackingConfig);
+        if (secretTracker) {
+          await secretTracker.initialize(this.targetDir);
+          if (this.debugMode) {
+            console.log('[DEBUG] Secret tracking initialized successfully');
+          }
+          
+          // Log telemetry event for secret tracking enablement at startup
+          if (this.telemetrySettings.enabled) {
+            logSecretTracking(this, new SecretTrackingEvent(true, 'startup', this.sessionId));
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to initialize secret tracking:', error);
+        // Don't fail initialization if secret tracking fails
+      }
+    }
+    
     this.startupProgressManager.completePhase('Configuration initialized');
 
     // Tool registry initialization will be handled in createToolRegistry
@@ -365,6 +405,70 @@ export class Config {
 
   getStartupProgressManager(): StartupProgressManager {
     return this.startupProgressManager;
+  }
+
+  getSecretTrackingConfig(): SecretTrackingConfig {
+    return { ...this.secretTrackingConfig };
+  }
+
+  isSecretTrackingEnabled(): boolean {
+    return this.secretTrackingConfig.enabled;
+  }
+
+  async toggleSecretTracking(enabled: boolean): Promise<boolean> {
+    const wasEnabled = this.secretTrackingConfig.enabled;
+    
+    if (enabled === wasEnabled) {
+      return enabled; // No change needed
+    }
+
+    if (enabled) {
+      // Enable secret tracking
+      try {
+        const newConfig = { ...this.secretTrackingConfig, enabled: true };
+        const secretTracker = SecretTracker.getInstance(this.sessionId, newConfig);
+        if (secretTracker) {
+          await secretTracker.initialize(this.targetDir);
+          // Update the config only if initialization succeeds
+          (this.secretTrackingConfig as { enabled: boolean }).enabled = true;
+          
+          // Log telemetry event for secret tracking enablement
+          if (this.telemetrySettings.enabled) {
+            logSecretTracking(this, new SecretTrackingEvent(true, 'command', this.sessionId));
+          }
+          
+          return true;
+        }
+      } catch (error) {
+        console.warn('Failed to enable secret tracking:', error);
+        return false;
+      }
+    } else {
+      // Disable secret tracking
+      try {
+        const secretTracker = SecretTracker.getInstance();
+        if (secretTracker) {
+          await secretTracker.close();
+        }
+        SecretTracker.reset();
+        // Update the config
+        (this.secretTrackingConfig as { enabled: boolean }).enabled = false;
+        
+        // Log telemetry event for secret tracking disablement
+        if (this.telemetrySettings.enabled) {
+          logSecretTracking(this, new SecretTrackingEvent(false, 'command', this.sessionId));
+        }
+        
+        return false;
+      } catch (error) {
+        console.warn('Failed to disable secret tracking:', error);
+        // Even if close fails, we can still disable it
+        (this.secretTrackingConfig as { enabled: boolean }).enabled = false;
+        return false;
+      }
+    }
+    
+    return enabled;
   }
 
   getEmbeddingModel(): string {

@@ -25,6 +25,7 @@ import {
   UnauthorizedError,
   UserPromptEvent,
   DEFAULT_GEMINI_FLASH_MODEL,
+  SecretTracker,
 } from '@google/gemini-cli-core';
 import { type Part, type PartListUnion } from '@google/genai';
 import {
@@ -54,6 +55,7 @@ import {
   TrackedCancelledToolCall,
 } from './useReactToolScheduler.js';
 import { useSessionStats } from '../contexts/SessionContext.js';
+import { useGitBranchName } from './useGitBranchName.js';
 
 export function mergePartListUnions(list: PartListUnion[]): PartListUnion {
   const resultParts: PartListUnion = [];
@@ -104,6 +106,7 @@ export const useGeminiStream = (
   const processedMemoryToolsRef = useRef<Set<string>>(new Set());
   const { startNewPrompt, getPromptCount } = useSessionStats();
   const logger = useLogger();
+  const gitBranchName = useGitBranchName(config.getTargetDir());
   const gitService = useMemo(() => {
     if (!config.getProjectRoot()) {
       return;
@@ -518,6 +521,25 @@ export const useGeminiStream = (
         prompt_id = config.getSessionId() + '########' + getPromptCount();
       }
 
+      // Secret tracking: Start user interaction if this is not a continuation
+      let secretInteractionId: string | null = null;
+      if (!options?.isContinuation && typeof query === 'string') {
+        const secretTracker = SecretTracker.getInstance();
+        if (secretTracker?.isEnabled()) {
+          try {
+            secretInteractionId = await secretTracker.startUserInteraction(query, {
+              gitBranch: gitBranchName || undefined,
+              model: config.getModel(),
+              workingDirectory: config.getWorkingDir(),
+              shellMode: shellModeActive,
+            });
+          } catch (error) {
+            // Silent failure for secret tracking
+            console.debug('Secret tracking error in startUserInteraction:', error);
+          }
+        }
+      }
+
       const { queryToSend, shouldProceed } = await prepareQueryForGemini(
         query,
         userMessageTimestamp,
@@ -526,6 +548,15 @@ export const useGeminiStream = (
       );
 
       if (!shouldProceed || queryToSend === null) {
+        // Secret tracking: Complete interaction if tracking was started
+        if (secretInteractionId) {
+          const secretTracker = SecretTracker.getInstance();
+          try {
+            await secretTracker?.completeInteraction(false, 'Query processing stopped');
+          } catch (error) {
+            console.debug('Secret tracking error in completeInteraction:', error);
+          }
+        }
         return;
       }
 
@@ -537,6 +568,19 @@ export const useGeminiStream = (
       setInitError(null);
 
       try {
+        // Secret tracking: Record model input
+        if (secretInteractionId) {
+          const secretTracker = SecretTracker.getInstance();
+          try {
+            await secretTracker?.recordModelInput(secretInteractionId, queryToSend, {
+              model: config.getModel(),
+              systemPrompt: false,
+            });
+          } catch (error) {
+            console.debug('Secret tracking error in recordModelInput:', error);
+          }
+        }
+
         const stream = geminiClient.sendMessageStream(
           queryToSend,
           abortSignal,
@@ -549,14 +593,55 @@ export const useGeminiStream = (
         );
 
         if (processingStatus === StreamProcessingStatus.UserCancelled) {
+          // Secret tracking: Complete interaction with cancellation
+          if (secretInteractionId) {
+            const secretTracker = SecretTracker.getInstance();
+            try {
+              await secretTracker?.completeInteraction(false, 'User cancelled');
+            } catch (error) {
+              console.debug('Secret tracking error in completeInteraction:', error);
+            }
+          }
           return;
+        }
+
+        // Secret tracking: Record model output if we have pending content
+        if (secretInteractionId && pendingHistoryItemRef.current) {
+          const secretTracker = SecretTracker.getInstance();
+          try {
+            await secretTracker?.recordModelOutput(secretInteractionId, pendingHistoryItemRef.current, {
+              model: config.getModel(),
+            });
+          } catch (error) {
+            console.debug('Secret tracking error in recordModelOutput:', error);
+          }
         }
 
         if (pendingHistoryItemRef.current) {
           addItem(pendingHistoryItemRef.current, userMessageTimestamp);
           setPendingHistoryItem(null);
         }
+
+        // Secret tracking: Complete interaction successfully
+        if (secretInteractionId) {
+          const secretTracker = SecretTracker.getInstance();
+          try {
+            await secretTracker?.completeInteraction(true);
+          } catch (error) {
+            console.debug('Secret tracking error in completeInteraction:', error);
+          }
+        }
       } catch (error: unknown) {
+        // Secret tracking: Complete interaction with error
+        if (secretInteractionId) {
+          const secretTracker = SecretTracker.getInstance();
+          try {
+            await secretTracker?.completeInteraction(false, getErrorMessage(error));
+          } catch (trackingError) {
+            console.debug('Secret tracking error in completeInteraction:', trackingError);
+          }
+        }
+
         if (error instanceof UnauthorizedError) {
           onAuthError();
         } else if (!isNodeError(error) || error.name !== 'AbortError') {
@@ -593,6 +678,8 @@ export const useGeminiStream = (
       config,
       startNewPrompt,
       getPromptCount,
+      gitBranchName,
+      shellModeActive,
     ],
   );
 

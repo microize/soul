@@ -123,6 +123,10 @@ vi.mock('./slashCommandProcessor.js', () => ({
   handleSlashCommand: vi.fn().mockReturnValue(false),
 }));
 
+vi.mock('./useGitBranchName.js', () => ({
+  useGitBranchName: vi.fn().mockReturnValue('main'),
+}));
+
 const mockParseAndFormatApiError = vi.hoisted(() => vi.fn());
 vi.mock('../utils/errorParsing.js', () => ({
   parseAndFormatApiError: mockParseAndFormatApiError,
@@ -297,6 +301,7 @@ describe('useGeminiStream', () => {
         () => ({ getToolSchemaList: vi.fn(() => []) }) as any,
       ),
       getProjectRoot: vi.fn(() => '/test/dir'),
+      getTargetDir: vi.fn(() => '/test/dir'),
       getCheckpointingEnabled: vi.fn(() => false),
       getGeminiClient: mockGetGeminiClient,
       getUsageStatisticsEnabled: () => true,
@@ -307,6 +312,9 @@ describe('useGeminiStream', () => {
       },
       setQuotaErrorOccurred: vi.fn(),
       getQuotaErrorOccurred: vi.fn(() => false),
+      isSecretTrackingEnabled: vi.fn(() => true),
+      getWorkingDir: vi.fn(() => '/test/dir'),
+      getModel: vi.fn(() => 'gemini-pro'),
     } as unknown as Config;
     mockOnDebugMessage = vi.fn();
     mockHandleSlashCommand = vi.fn().mockResolvedValue(false);

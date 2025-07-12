@@ -14,6 +14,7 @@ import {
   EVENT_CLI_CONFIG,
   EVENT_TOOL_CALL,
   EVENT_USER_PROMPT,
+  EVENT_SECRET_TRACKING,
   SERVICE_NAME,
 } from './constants.js';
 import {
@@ -23,6 +24,7 @@ import {
   StartSessionEvent,
   ToolCallEvent,
   UserPromptEvent,
+  SecretTrackingEvent,
 } from './types.js';
 import {
   recordApiErrorMetrics,
@@ -262,4 +264,29 @@ export function logApiResponse(config: Config, event: ApiResponseEvent): void {
     'thought',
   );
   recordTokenUsageMetrics(config, event.model, event.tool_token_count, 'tool');
+}
+
+export function logSecretTracking(config: Config, event: SecretTrackingEvent): void {
+  const uiEvent = {
+    ...event,
+    'event.name': EVENT_SECRET_TRACKING,
+    'event.timestamp': new Date().toISOString(),
+  } as UiEvent;
+  uiTelemetryService.addEvent(uiEvent);
+  
+  if (!isTelemetrySdkInitialized()) return;
+
+  const attributes: LogAttributes = {
+    ...getCommonAttributes(config),
+    ...event,
+    'event.name': EVENT_SECRET_TRACKING,
+    'event.timestamp': new Date().toISOString(),
+  };
+
+  const logger = logs.getLogger(SERVICE_NAME);
+  const logRecord: LogRecord = {
+    body: `Secret tracking ${event.enabled ? 'enabled' : 'disabled'} via ${event.trigger}.`,
+    attributes,
+  };
+  logger.emit(logRecord);
 }

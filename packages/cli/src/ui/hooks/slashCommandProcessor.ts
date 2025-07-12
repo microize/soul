@@ -265,6 +265,132 @@ export const useSlashCommandProcessor = (
         action: (_mainCommand, _subCommand, _args) => openPrivacyNotice(),
       },
       {
+        name: 'secret',
+        description: 'toggle secret interaction tracking. Usage: /secret [on|off|status|flush]',
+        action: async (_mainCommand, subCommand, _args) => {
+          if (!config) {
+            addMessage({
+              type: MessageType.ERROR,
+              content: 'Configuration not available.',
+              timestamp: new Date(),
+            });
+            return;
+          }
+
+          const action = subCommand || _args || 'status';
+
+          switch (action.toLowerCase()) {
+            case 'on':
+            case 'enable':
+            case 'true':
+              try {
+                const success = await config.toggleSecretTracking(true);
+                addMessage({
+                  type: MessageType.INFO,
+                  content: success 
+                    ? '🔍 Secret interaction tracking is now enabled. All user interactions, tool calls, and model I/O will be logged to .soul-cache/secret-tracking-*.json'
+                    : '❌ Failed to enable secret tracking. Check console for details.',
+                  timestamp: new Date(),
+                });
+              } catch (error) {
+                addMessage({
+                  type: MessageType.ERROR,
+                  content: `Failed to enable secret tracking: ${error instanceof Error ? error.message : String(error)}`,
+                  timestamp: new Date(),
+                });
+              }
+              break;
+
+            case 'off':
+            case 'disable':
+            case 'false':
+              try {
+                const success = await config.toggleSecretTracking(false);
+                addMessage({
+                  type: MessageType.INFO,
+                  content: success 
+                    ? '🔍 Secret interaction tracking disabled.'
+                    : '🔍 Secret interaction tracking was already disabled.',
+                  timestamp: new Date(),
+                });
+              } catch (error) {
+                addMessage({
+                  type: MessageType.ERROR,
+                  content: `Failed to disable secret tracking: ${error instanceof Error ? error.message : String(error)}`,
+                  timestamp: new Date(),
+                });
+              }
+              break;
+
+            case 'flush':
+            case 'write':
+              try {
+                const { SecretTracker } = await import('@google/gemini-cli-core');
+                const secretTracker = SecretTracker.getInstance();
+                if (secretTracker && secretTracker.isEnabled()) {
+                  await secretTracker.flush();
+                  addMessage({
+                    type: MessageType.INFO,
+                    content: '🔍 Secret tracking buffer flushed to disk. Check .soul-cache/secret-tracking-*.json for your interaction data.',
+                    timestamp: new Date(),
+                  });
+                } else {
+                  addMessage({
+                    type: MessageType.INFO,
+                    content: '🔍 Secret tracking is not enabled or initialized.',
+                    timestamp: new Date(),
+                  });
+                }
+              } catch (error) {
+                addMessage({
+                  type: MessageType.ERROR,
+                  content: `Failed to flush secret tracking: ${error instanceof Error ? error.message : String(error)}`,
+                  timestamp: new Date(),
+                });
+              }
+              break;
+
+            case 'status':
+            case 'info':
+            default: {
+              const isEnabled = config.isSecretTrackingEnabled();
+              const trackingConfig = config.getSecretTrackingConfig();
+              
+              let statusMessage = `🔍 Secret Interaction Tracking\n\n`;
+              statusMessage += `Status: ${isEnabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+              
+              if (isEnabled) {
+                statusMessage += `Output Directory: ${trackingConfig.outputDirectory || '.soul-cache'}\n`;
+                statusMessage += `Max File Size: ${trackingConfig.maxFileSize}MB\n`;
+                statusMessage += `Max Age: ${trackingConfig.maxDays} days\n`;
+                statusMessage += `Buffer Size: ${trackingConfig.bufferSize} interactions\n\n`;
+                statusMessage += `Files are stored as: secret-tracking-{sessionId}.json\n`;
+                statusMessage += `Each file contains complete interaction chains with:\n`;
+                statusMessage += `• User questions with context (git branch, model, directory)\n`;
+                statusMessage += `• Tool calls with parameters, results, and execution order\n`;
+                statusMessage += `• Model inputs and outputs with metadata\n`;
+                statusMessage += `• Timestamps and duration tracking\n\n`;
+                statusMessage += `Environment variable: SOUL_SECRET_TRACKING=${process.env.SOUL_SECRET_TRACKING || 'not set'}\n`;
+                statusMessage += `Use '/secret off' to disable tracking`;
+              } else {
+                statusMessage += `\nSecret tracking is disabled by user configuration.\n`;
+                statusMessage += `To re-enable secret tracking:\n`;
+                statusMessage += `• Use '/secret on' command\n`;
+                statusMessage += `• Remove SOUL_SECRET_TRACKING=false environment variable\n`;
+                statusMessage += `• Remove or change secretTracking: { enabled: false } in config`;
+              }
+
+              addMessage({
+                type: MessageType.INFO,
+                content: statusMessage,
+                timestamp: new Date(),
+              });
+              break;
+            }
+          }
+        },
+      },
+      {
         name: 'stats',
         altName: 'usage',
         description: 'check session stats. Usage: /stats [model|tools]',

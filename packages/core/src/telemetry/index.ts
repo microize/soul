@@ -25,6 +25,7 @@ export {
   logApiRequest,
   logApiError,
   logApiResponse,
+  logSecretTracking,
 } from './loggers.js';
 export {
   StartSessionEvent,
@@ -34,6 +35,7 @@ export {
   ApiRequestEvent,
   ApiErrorEvent,
   ApiResponseEvent,
+  SecretTrackingEvent,
   TelemetryEvent,
 } from './types.js';
 export { SpanStatusCode, ValueType } from '@opentelemetry/api';
