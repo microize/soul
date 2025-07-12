@@ -40,6 +40,9 @@ import { TreeSitterTool } from '../tools/tree-sitter.js';
 import { CodeRAGTool } from '../tools/code-rag.js';
 import { MultiEditTool } from '../tools/multi-edit.js';
 import { TaskTool } from '../tools/task.js';
+import { UIDesignMasterTool } from '../tools/ui-design-master.js';
+import { BehavioralScienceAnalyzerTool } from '../tools/behavioral-science-analyzer.js';
+import { TechnicalResearchAdvisorTool } from '../tools/technical-research-advisor.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -773,7 +776,8 @@ export class Config {
       WebFetchTool, ReadManyFilesTool, ShellTool, MemoryTool, WebSearchTool,
       NotebookEditTool, PlanModeTool, TodoWriteTool, TodoReadTool, RepoMapTool,
       GitOperationsTool, CodeAnalysisTool, TestGenerationTool, TreeSitterTool,
-      CodeRAGTool, MultiEditTool, TaskTool
+      CodeRAGTool, MultiEditTool, TaskTool, UIDesignMasterTool, BehavioralScienceAnalyzerTool,
+      TechnicalResearchAdvisorTool
     ];
 
     let registeredTools = 0;
@@ -842,6 +846,9 @@ export class Config {
     registerCoreTool(CodeRAGTool, this);
     registerCoreTool(MultiEditTool, this);
     registerCoreTool(TaskTool, this);
+    registerCoreTool(UIDesignMasterTool, this);
+    registerCoreTool(BehavioralScienceAnalyzerTool, this);
+    registerCoreTool(TechnicalResearchAdvisorTool, this);
 
     this.startupProgressManager.updateProgress('Discovering additional tools', 85);
     await registry.discoverTools();

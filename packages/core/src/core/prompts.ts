@@ -32,6 +32,9 @@ import { GitOperationsTool } from '../tools/git-operations.js';
 import { MultiEditTool } from '../tools/multi-edit.js';
 import { TaskTool } from '../tools/task.js';
 import { NotebookEditTool } from '../tools/notebook-edit.js';
+import { UIDesignMasterTool } from '../tools/ui-design-master.js';
+import { BehavioralScienceAnalyzerTool } from '../tools/behavioral-science-analyzer.js';
+import { TechnicalResearchAdvisorTool } from '../tools/technical-research-advisor.js';
 
 /**
  * Generates dynamic tool categories and references based on available tools
@@ -45,9 +48,9 @@ async function generateToolCategories(config?: Config): Promise<string> {
 - **Advanced Code Intelligence:** '${TreeSitterTool.Name}', '${CodeRAGTool.Name}', '${RepoMapTool.Name}', '${CodeAnalysisTool.Name}'
 - **Development Workflow:** '${GitOperationsTool.Name}', '${MultiEditTool.Name}', '${TaskTool.Name}'
 - **Quality Assurance:** '${TestGenerationTool.Name}', '${NotebookEditTool.Name}'
+- **Design & User Experience:** '${UIDesignMasterTool.Name}', '${BehavioralScienceAnalyzerTool.Name}', '${TechnicalResearchAdvisorTool.Name}'
 - **External Integration:** '${WebFetchTool.Name}', '${WebSearchTool.Name}'
-- **Task Management:** '${TodoWriteTool.Name}', '${TodoReadTool.Name}', '${PlanModeTool.Name}', '${MemoryTool.Name}'
-- **Command Execution:** '${ShellTool.Name}'
+- **Task Management:** '${TodoWriteTool.Name}', '${TodoReadTool.Name}', '${PlanModeTool.Name}', '${MemoryTool.Name}', '${ShellTool.Name}'
 `;
   }
 
@@ -61,13 +64,14 @@ async function generateToolCategories(config?: Config): Promise<string> {
       'Advanced Code Intelligence': [] as string[],
       'Development Workflow': [] as string[],
       'Quality Assurance': [] as string[],
+      'Design & User Experience': [] as string[],
       'External Integration': [] as string[],
       'Task Management': [] as string[],
     };
 
     tools.forEach(tool => {
       const name = tool.name;
-      if (['ls', 'read_file', 'write_file', 'edit', 'glob', 'grep', 'read_many_files'].includes(name)) {
+      if (['list_directory', 'read_file', 'write_file', 'replace', 'glob', 'search_file_content', 'read_many_files'].includes(name)) {
         categories['Core File Operations'].push(`'${name}'`);
       } else if (['tree_sitter', 'code_rag', 'repo_map', 'code_analysis'].includes(name)) {
         categories['Advanced Code Intelligence'].push(`'${name}'`);
@@ -75,11 +79,13 @@ async function generateToolCategories(config?: Config): Promise<string> {
         categories['Development Workflow'].push(`'${name}'`);
       } else if (['test_generator', 'notebook_edit'].includes(name)) {
         categories['Quality Assurance'].push(`'${name}'`);
-      } else if (['web_fetch', 'web_search'].includes(name)) {
+      } else if (['ui_design_master', 'behavioral_science_analyzer', 'technical_research_advisor'].includes(name)) {
+        categories['Design & User Experience'].push(`'${name}'`);
+      } else if (['web_fetch', 'google_web_search'].includes(name)) {
         categories['External Integration'].push(`'${name}'`);
-      } else if (['todo_write', 'todo_read', 'plan_mode', 'memory'].includes(name)) {
+      } else if (['todo_write', 'todo_read', 'plan_mode', 'save_memory'].includes(name)) {
         categories['Task Management'].push(`'${name}'`);
-      } else if (name === 'shell') {
+      } else if (name === 'run_shell_command') {
         categories['Task Management'].push(`'${name}'`);
       }
     });
@@ -97,9 +103,9 @@ async function generateToolCategories(config?: Config): Promise<string> {
 - **Advanced Code Intelligence:** '${TreeSitterTool.Name}', '${CodeRAGTool.Name}', '${RepoMapTool.Name}', '${CodeAnalysisTool.Name}'
 - **Development Workflow:** '${GitOperationsTool.Name}', '${MultiEditTool.Name}', '${TaskTool.Name}'
 - **Quality Assurance:** '${TestGenerationTool.Name}', '${NotebookEditTool.Name}'
+- **Design & User Experience:** '${UIDesignMasterTool.Name}', '${BehavioralScienceAnalyzerTool.Name}', '${TechnicalResearchAdvisorTool.Name}'
 - **External Integration:** '${WebFetchTool.Name}', '${WebSearchTool.Name}'
-- **Task Management:** '${TodoWriteTool.Name}', '${TodoReadTool.Name}', '${PlanModeTool.Name}', '${MemoryTool.Name}'
-- **Command Execution:** '${ShellTool.Name}'
+- **Task Management:** '${TodoWriteTool.Name}', '${TodoReadTool.Name}', '${PlanModeTool.Name}', '${MemoryTool.Name}', '${ShellTool.Name}'
 `;
   }
 }
@@ -259,12 +265,13 @@ assistant: Clients are marked as failed in the "connectToServer" function in src
 
 ${toolCategories || `
 ## Core Tool Categories
-- **Core File Operations:** 'ls', 'read_file', 'write_file', 'edit', 'glob', 'grep', 'read_many_files'
+- **Core File Operations:** 'list_directory', 'read_file', 'write_file', 'replace', 'glob', 'search_file_content', 'read_many_files'
 - **Advanced Code Intelligence:** 'tree_sitter', 'code_rag', 'repo_map', 'code_analysis'
 - **Development Workflow:** 'git_ops', 'multi_edit', 'task'
 - **Quality Assurance:** 'test_generator', 'notebook_edit'
-- **External Integration:** 'web_fetch', 'web_search'
-- **Task Management:** 'todo_write', 'todo_read', 'plan_mode', 'memory'
+- **Design & User Experience:** 'ui_design_master', 'behavioral_science_analyzer', 'technical_research_advisor'
+- **External Integration:** 'web_fetch', 'google_web_search'
+- **Task Management:** 'todo_write', 'todo_read', 'plan_mode', 'save_memory', 'run_shell_command'
 `}
 
 ${systematicWorkflows}
@@ -279,7 +286,8 @@ ${systematicWorkflows}
 ### Context-Aware Decision Making
 - **Project Phase**: New projects benefit from 'plan_mode' and 'todo_write' for systematic planning
 - **Maintenance Phase**: Use 'git_ops' and 'multi_edit' for coordinated changes across multiple files
-- **Research Phase**: Leverage 'code_rag' for semantic understanding and 'web_search' for external knowledge
+- **Research Phase**: Leverage 'code_rag' for semantic understanding, 'web_search' for external knowledge, and 'technical_research_advisor' for expert-level technical research
+- **Technical Investigation**: Use 'technical_research_advisor' when you need comprehensive research across GitHub, academic papers, Stack Overflow, and documentation sources
 
 ### Cognitive Load Management
 - **Chunking**: Break complex tasks into smaller, manageable pieces using 'todo_write'
@@ -305,6 +313,7 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
    - Use '${TreeSitterTool.Name}' for precise symbol and structure analysis
    - Use '${GrepTool.Name}' and '${GlobTool.Name}' for comprehensive text-based searches
    - Use '${ReadFileTool.Name}' and '${ReadManyFilesTool.Name}' to understand context
+   - Use '${TechnicalResearchAdvisorTool.Name}' for expert-level research when investigating new technologies, implementation approaches, or best practices
    - Repository analysis benefits from intelligent caching with automatic change detection
 
 2. **Analysis Phase**:
@@ -412,6 +421,7 @@ When key technologies aren't specified, prefer the following:
 - **Autonomous Tasks:** Use '${TaskTool.Name}' for complex operations that benefit from autonomous execution with their own tool access.
 - **Quality Assurance:** Use '${CodeAnalysisTool.Name}' proactively before making changes, and '${TestGenerationTool.Name}' for comprehensive testing.
 - **Intelligent Search:** Use '${CodeRAGTool.Name}' for semantic understanding and '${TreeSitterTool.Name}' for precise structural analysis.
+- **Expert Research:** Use '${TechnicalResearchAdvisorTool.Name}' when you need comprehensive technical research across GitHub, academic papers, Stack Overflow, and documentation sources. This tool should only be used when explicitly requested by the user.
 
 ### Confirmation and Respect
 - **User Confirmations:** Most tool calls require user confirmation. If a user cancels a function call, respect their choice and do not retry unless explicitly requested.
