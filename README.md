@@ -1,17 +1,22 @@
-# Gemini CLI
+# Soul CLI
 
-[![Gemini CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)
+[![Soul CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)
 
-![Gemini CLI Screenshot](./docs/assets/gemini-screenshot.png)
+![Soul CLI Screenshot](./docs/assets/gemini-screenshot.png)
 
-This repository contains the Gemini CLI, a command-line AI workflow tool that connects to your
-tools, understands your code and accelerates your workflows.
+Soul CLI is an enterprise-grade AI coding workflow tool that builds on Google's open-source Gemini CLI. This advanced command-line AI workflow tool connects to your tools, understands your code, and accelerates your workflows with powerful autonomous capabilities.
 
-With the Gemini CLI you can:
+With Soul CLI you can:
 
-- Query and edit large codebases in and beyond Gemini's 1M token context window.
-- Generate new apps from PDFs or sketches, using Gemini's multimodal capabilities.
-- Automate operational tasks, like querying pull requests or handling complex rebases.
+- **Advanced Code Intelligence**: Query and edit large codebases with AST-based parsing, semantic search, and persistent caching
+- **Autonomous Task Execution**: Deploy separate agent processes with full tool access for complex multi-step operations
+- **Mathematical Design Excellence**: Create beautiful interfaces using golden ratio principles and minimalist design guidelines
+- **Comprehensive Code Analysis**: Deep code quality assessment, security analysis, and automated test generation
+- **Multi-File Operations**: Atomic batch editing across multiple files with conflict detection and rollback capability
+- **Behavioral Science Integration**: User experience optimization using psychological frameworks and behavioral modeling
+- **Expert Technical Research**: Multi-source research combining GitHub, arXiv, Semantic Scholar, and Stack Overflow
+- **Repository Intelligence**: Automatic codebase mapping with TreeSitter AST analysis and change detection
+- **Persistent Caching**: 10x+ performance improvements through intelligent file-based caching with change detection
 - Use tools and MCP servers to connect new capabilities, including [media generation with Imagen,
   Veo or Lyria](https://github.com/GoogleCloudPlatform/vertex-ai-creative-studio/tree/main/experiments/mcp-genmedia)
 - Ground your queries with the [Google Search](https://ai.google.dev/gemini-api/docs/grounding)
@@ -20,7 +25,7 @@ With the Gemini CLI you can:
 ## Quickstart
 
 1. **Prerequisites:** Ensure you have [Node.js version 20](https://nodejs.org/en/download) or higher installed.
-2. **Run the CLI:** Execute the following command in your terminal:
+2. **Run Soul CLI:** Execute the following command in your terminal:
 
    ```bash
    npx https://github.com/google-gemini/gemini-cli
@@ -30,13 +35,13 @@ With the Gemini CLI you can:
 
    ```bash
    npm install -g @google/gemini-cli
-   gemini
+   soul
    ```
 
 3. **Pick a color theme**
 4. **Authenticate:** When prompted, sign in with your personal Google account. This will grant you up to 60 model requests per minute and 1,000 model requests per day using Gemini.
 
-You are now ready to use the Gemini CLI!
+You are now ready to use Soul CLI with its advanced enterprise features!
 
 ### Use a Gemini API key:
 
@@ -69,24 +74,70 @@ For other authentication methods, including Google Workspace accounts, see the [
 
 ## Examples
 
-Once the CLI is running, you can start interacting with Gemini from your shell.
+Once Soul CLI is running, you can start leveraging its advanced capabilities from your shell.
 
-You can start a project from a new directory:
-
-```sh
-cd new-project/
-gemini
-> Write me a Gemini Discord bot that answers questions using a FAQ.md file I will provide
-```
-
-Or work with an existing project:
+**Enterprise-grade code analysis:**
 
 ```sh
-git clone https://github.com/google-gemini/gemini-cli
-cd gemini-cli
-gemini
-> Give me a summary of all of the changes that went in yesterday
+cd your-project/
+soul
+> Analyze this codebase architecture and suggest performance improvements using the code analysis tool
 ```
+
+**Autonomous task execution:**
+
+```sh
+cd complex-project/
+soul
+> Use the task agent to refactor this entire module to use TypeScript strict mode, run tests, and fix any issues
+```
+
+**Mathematical design optimization:**
+
+```sh
+cd frontend-project/
+soul
+> Apply golden ratio principles to optimize the visual hierarchy of our dashboard components
+```
+
+**Advanced repository intelligence:**
+
+```sh
+git clone https://github.com/your-org/large-codebase
+cd large-codebase
+soul
+> Map this repository structure and identify the main architectural patterns with semantic analysis
+```
+
+## Advanced Features
+
+Soul CLI includes 26+ specialized tools for enterprise development workflows:
+
+### Code Intelligence Tools
+- **TreeSitter Parser**: AST-based code parsing and symbol extraction
+- **Code RAG Search**: Semantic code search with persistent caching  
+- **Repository Map**: Automated codebase analysis and architecture detection
+- **Code Analysis**: Deep quality assessment with security and performance insights
+
+### Development Workflow Tools
+- **Multi Edit**: Atomic batch operations across multiple files with rollback
+- **Git Operations**: Comprehensive Git workflow management with conflict detection
+- **Test Generation**: Automated test creation for multiple frameworks
+- **Task Agent**: Autonomous processes for complex multi-step operations
+
+### Design & UX Tools
+- **UI Design Master**: Mathematical design optimization using golden ratio principles
+- **Behavioral Science Analyzer**: UX optimization with psychological frameworks
+
+### Research & Planning Tools
+- **Technical Research Advisor**: Multi-source research across GitHub, arXiv, Semantic Scholar
+- **Plan Mode**: Structured thinking and ideation without making edits
+- **Todo Management**: Advanced task tracking with persistent storage
+
+### Performance & Intelligence
+- **Persistent Caching**: 10x+ performance improvements with intelligent change detection
+- **Notebook Operations**: Full Jupyter notebook editing capabilities
+- **Memory Management**: Cross-session information persistence
 
 ### Next steps
 
@@ -103,48 +154,66 @@ having issues.
 
 ## Popular tasks
 
-### Explore a new codebase
+### Enterprise Code Intelligence
 
-Start by `cd`ing into an existing or newly-cloned repository and running `gemini`.
+Start by `cd`ing into an existing or newly-cloned repository and running `soul`.
 
 ```text
-> Describe the main pieces of this system's architecture.
+> Use the repository map tool to analyze this codebase architecture and identify key patterns.
 ```
 
 ```text
-> What security mechanisms are in place?
-```
-
-### Work with your existing code
-
-```text
-> Implement a first draft for GitHub issue #123.
+> Perform a comprehensive security analysis using the code analysis tool and identify vulnerabilities.
 ```
 
 ```text
-> Help me migrate this codebase to the latest version of Java. Start with a plan.
+> Use semantic search to find all authentication-related code across this large codebase.
 ```
 
-### Automate your workflows
-
-Use MCP servers to integrate your local system tools with your enterprise collaboration suite.
+### Advanced Development Workflows
 
 ```text
-> Make me a slide deck showing the git history from the last 7 days, grouped by feature and team member.
-```
-
-```text
-> Make a full-screen web app for a wall display to show our most interacted-with GitHub issues.
-```
-
-### Interact with your system
-
-```text
-> Convert all the images in this directory to png, and rename them to use dates from the exif data.
+> Use the task agent to implement GitHub issue #123 with full testing and documentation.
 ```
 
 ```text
-> Organize my PDF invoices by month of expenditure.
+> Create a migration plan using plan mode, then use multi-edit to update all files atomically.
+```
+
+```text
+> Generate comprehensive test suites for this module using the test generation tool.
+```
+
+### Mathematical Design Optimization
+
+```text
+> Apply golden ratio principles to optimize the visual hierarchy of this dashboard.
+```
+
+```text
+> Analyze the current design using behavioral science principles and suggest UX improvements.
+```
+
+### Autonomous System Operations
+
+Use the task agent for complex multi-step operations:
+
+```text
+> Use the task agent to refactor this entire module, run tests, fix issues, and commit changes.
+```
+
+```text
+> Research best practices for React performance optimization across multiple sources.
+```
+
+### Enterprise Data Analysis
+
+```text
+> Use behavioral science analysis to optimize our user onboarding flow.
+```
+
+```text
+> Research and implement advanced caching strategies using the technical research advisor.
 ```
 
 ### Uninstall

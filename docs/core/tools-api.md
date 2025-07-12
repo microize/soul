@@ -1,6 +1,6 @@
-# Gemini CLI Core: Tools API
+# Soul CLI Core: Advanced Tools API
 
-The Gemini CLI core (`packages/core`) features a robust system for defining, registering, and executing tools. These tools extend the capabilities of the Gemini model, allowing it to interact with the local environment, fetch web content, and perform various actions beyond simple text generation.
+The Soul CLI core (`packages/core`) features an enterprise-grade system for defining, registering, and executing 26+ specialized tools. These advanced tools enable autonomous agents, code intelligence, mathematical design optimization, and sophisticated workflow automation beyond traditional text generation.
 
 ## Core Concepts
 
@@ -26,25 +26,49 @@ The Gemini CLI core (`packages/core`) features a robust system for defining, reg
   - **Providing Schemas:** Exposing the `FunctionDeclaration` schemas of all registered tools to the Gemini model, so it knows what tools are available and how to use them.
   - **Retrieving Tools:** Allowing the core to get a specific tool by name for execution.
 
-## Built-in Tools
+## Enterprise Tool Suite
 
-The core comes with a suite of pre-defined tools, typically found in `packages/core/src/tools/`. These include:
+Soul CLI includes 26+ specialized tools organized into enterprise categories:
 
-- **File System Tools:**
-  - `LSTool` (`ls.ts`): Lists directory contents.
-  - `ReadFileTool` (`read-file.ts`): Reads the content of a single file. It takes an `absolute_path` parameter, which must be an absolute path.
-  - `WriteFileTool` (`write-file.ts`): Writes content to a file.
-  - `GrepTool` (`grep.ts`): Searches for patterns in files.
-  - `GlobTool` (`glob.ts`): Finds files matching glob patterns.
-  - `EditTool` (`edit.ts`): Performs in-place modifications to files (often requiring confirmation).
-  - `ReadManyFilesTool` (`read-many-files.ts`): Reads and concatenates content from multiple files or glob patterns (used by the `@` command in CLI).
-- **Execution Tools:**
-  - `ShellTool` (`shell.ts`): Executes arbitrary shell commands (requires careful sandboxing and user confirmation).
-- **Web Tools:**
-  - `WebFetchTool` (`web-fetch.ts`): Fetches content from a URL.
-  - `WebSearchTool` (`web-search.ts`): Performs a web search.
-- **Memory Tools:**
-  - `MemoryTool` (`memoryTool.ts`): Interacts with the AI's memory.
+### Code Intelligence Tools
+- **TreeSitterTool** (`tree-sitter.ts`): AST-based code parsing and symbol extraction for multiple languages
+- **CodeRAGTool** (`code-rag.ts`): Semantic code search with natural language queries and persistent caching
+- **RepoMapTool** (`repo-map.ts`): Automated repository analysis with architecture pattern detection
+- **CodeAnalysisTool** (`code-analysis.ts`): Deep code quality assessment with security and performance insights
+
+### Autonomous Execution Tools
+- **TaskTool** (`task.ts`): Deploys separate agent processes with full tool access for complex operations
+- **TaskAgent** (`task-agent.ts`): Agent process implementation with isolated tool execution
+- **PlanModeTool** (`plan-mode.ts`): Structured thinking phases for complex problem-solving
+- **MultiEditTool** (`multi-edit.ts`): Atomic batch operations across multiple files with rollback
+
+### Development Workflow Tools
+- **GitOperationsTool** (`git-operations.ts`): Comprehensive Git workflow management with conflict detection
+- **TestGenerationTool** (`test-generation.ts`): Automated test creation for multiple frameworks
+- **NotebookEditTool** (`notebook-edit.ts`): Full Jupyter notebook editing capabilities
+- **TodoWriteTool** (`todo-write.ts`) & **TodoReadTool** (`todo-read.ts`): Advanced task tracking with persistence
+
+### Design & UX Tools
+- **UIDesignMasterTool** (`ui-design-master.ts`): Mathematical design optimization using golden ratio principles
+- **BehavioralScienceAnalyzerTool** (`behavioral-science-analyzer.ts`): UX optimization with psychological frameworks
+
+### Research & Intelligence Tools
+- **TechnicalResearchAdvisorTool** (`technical-research-advisor.ts`): Multi-source research across academic and industry sources
+
+### Enhanced File System Tools
+- **LSTool** (`ls.ts`): Directory listing with intelligent filtering
+- **ReadFileTool** (`read-file.ts`): File reading with caching and change detection
+- **WriteFileTool** (`write-file.ts`): File writing with transaction support
+- **GrepTool** (`grep.ts`): Pattern searching with semantic understanding
+- **GlobTool** (`glob.ts`): File pattern matching with performance optimization
+- **EditTool** (`edit.ts`): In-place modifications with rollback capability
+- **ReadManyFilesTool** (`read-many-files.ts`): Multi-file operations with caching
+
+### Execution & Web Tools
+- **ShellTool** (`shell.ts`): Shell command execution with enhanced security
+- **WebFetchTool** (`web-fetch.ts`): Advanced web content retrieval with AI processing
+- **WebSearchTool** (`web-search.ts`): Intelligent web search with result synthesis
+- **MemoryTool** (`memoryTool.ts`): Cross-session information persistence
 
 Each of these tools extends `BaseTool` and implements the required methods for its specific functionality.
 
@@ -67,7 +91,7 @@ Each of these tools extends `BaseTool` and implements the required methods for i
 
 While direct programmatic registration of new tools by users isn't explicitly detailed as a primary workflow in the provided files for typical end-users, the architecture supports extension through:
 
-- **Command-based Discovery:** Advanced users or project administrators can define a `toolDiscoveryCommand` in `settings.json`. This command, when run by the Gemini CLI core, should output a JSON array of `FunctionDeclaration` objects. The core will then make these available as `DiscoveredTool` instances. The corresponding `toolCallCommand` would then be responsible for actually executing these custom tools.
-- **MCP Server(s):** For more complex scenarios, one or more MCP servers can be set up and configured via the `mcpServers` setting in `settings.json`. The Gemini CLI core can then discover and use tools exposed by these servers. As mentioned, if you have multiple MCP servers, the tool names will be prefixed with the server name from your configuration (e.g., `serverAlias__actualToolName`).
+- **Command-based Discovery:** Advanced users or project administrators can define a `toolDiscoveryCommand` in `settings.json`. This command, when run by the Soul CLI core, should output a JSON array of `FunctionDeclaration` objects. The core will then make these available as `DiscoveredTool` instances. The corresponding `toolCallCommand` would then be responsible for actually executing these custom tools.
+- **MCP Server(s):** For more complex scenarios, one or more MCP servers can be set up and configured via the `mcpServers` setting in `settings.json`. The Soul CLI core can then discover and use tools exposed by these servers. As mentioned, if you have multiple MCP servers, the tool names will be prefixed with the server name from your configuration (e.g., `serverAlias__actualToolName`).
 
-This tool system provides a flexible and powerful way to augment the Gemini model's capabilities, making the Gemini CLI a versatile assistant for a wide range of tasks.
+This enterprise tool system provides sophisticated capabilities for autonomous agents, code intelligence, and mathematical design optimization, making Soul CLI an advanced enterprise development platform.

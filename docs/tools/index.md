@@ -1,54 +1,78 @@
-# Gemini CLI tools
+# Soul CLI tools
 
-The Gemini CLI includes built-in tools that the Gemini model uses to interact with your local environment, access information, and perform actions. These tools enhance the CLI's capabilities, enabling it to go beyond text generation and assist with a wide range of tasks.
+Soul CLI includes 26+ enterprise-grade tools that the AI model uses to interact with your local environment, perform advanced code analysis, and execute autonomous tasks. These tools enable enterprise-level capabilities including AST-based parsing, semantic search, mathematical design optimization, and autonomous agents.
 
-## Overview of Gemini CLI tools
+## Overview of Soul CLI tools
 
-In the context of the Gemini CLI, tools are specific functions or modules that the Gemini model can request to be executed. For example, if you ask Gemini to "Summarize the contents of `my_document.txt`," the model will likely identify the need to read that file and will request the execution of the `read_file` tool.
+In the context of Soul CLI, tools are sophisticated functions that enable enterprise-grade capabilities. For example, if you ask Soul to "Analyze this codebase architecture," it will use the repository map tool combined with TreeSitter AST parsing and semantic search to provide comprehensive analysis.
 
-The core component (`packages/core`) manages these tools, presents their definitions (schemas) to the Gemini model, executes them when requested, and returns the results to the model for further processing into a user-facing response.
+The core component (`packages/core`) manages these advanced tools, presents their schemas to the AI model, and orchestrates complex multi-tool workflows for autonomous task execution.
 
-These tools provide the following capabilities:
+These advanced tools provide enterprise-grade capabilities:
 
-- **Access local information:** Tools allow Gemini to access your local file system, read file contents, list directories, etc.
-- **Execute commands:** With tools like `run_shell_command`, Gemini can run shell commands (with appropriate safety measures and user confirmation).
-- **Interact with the web:** Tools can fetch content from URLs.
-- **Take actions:** Tools can modify files, write new files, or perform other actions on your system (again, typically with safeguards).
-- **Ground responses:** By using tools to fetch real-time or specific local data, Gemini's responses can be more accurate, relevant, and grounded in your actual context.
+- **Code Intelligence:** AST-based parsing, semantic search, repository mapping, and automated code analysis
+- **Autonomous Execution:** Deploy separate agent processes for complex multi-step operations with full tool access
+- **Mathematical Design:** Apply golden ratio principles and behavioral science for optimal UX design
+- **Advanced Analytics:** Deep code quality assessment, security analysis, and performance optimization
+- **Multi-File Operations:** Atomic batch editing with conflict detection, rollback, and transaction management
+- **Persistent Intelligence:** Caching systems providing 10x+ performance improvements with change detection
+- **Research Capabilities:** Multi-source research across GitHub, arXiv, Semantic Scholar, and Stack Overflow
+- **Enterprise Workflows:** Git operations, test generation, notebook editing, and comprehensive project management
 
-## How to use Gemini CLI tools
+## How to use Soul CLI tools
 
-To use Gemini CLI tools, provide a prompt to the Gemini CLI. The process works as follows:
+To leverage Soul CLI's advanced tools, provide natural language prompts describing complex tasks. The process involves sophisticated orchestration:
 
-1.  You provide a prompt to the Gemini CLI.
-2.  The CLI sends the prompt to the core.
-3.  The core, along with your prompt and conversation history, sends a list of available tools and their descriptions/schemas to the Gemini API.
-4.  The Gemini model analyzes your request. If it determines that a tool is needed, its response will include a request to execute a specific tool with certain parameters.
-5.  The core receives this tool request, validates it, and (often after user confirmation for sensitive operations) executes the tool.
-6.  The output from the tool is sent back to the Gemini model.
-7.  The Gemini model uses the tool's output to formulate its final answer, which is then sent back through the core to the CLI and displayed to you.
+1.  You provide a high-level prompt to Soul CLI (e.g., "Optimize this codebase architecture")
+2.  The CLI sends the prompt to the core with access to all 26+ enterprise tools
+3.  The core sends tool schemas to the AI model, enabling intelligent tool selection and orchestration
+4.  The AI model creates execution plans, potentially using multiple tools in sequence (repository mapping, AST parsing, semantic search, code analysis)
+5.  The core validates and executes tools, with autonomous agents handling complex multi-step operations
+6.  Advanced tools coordinate through persistent caching and intelligent change detection
+7.  Results are synthesized into comprehensive reports with actionable insights
 
-You will typically see messages in the CLI indicating when a tool is being called and whether it succeeded or failed.
+Soul CLI provides real-time feedback for tool execution, progress tracking for autonomous agents, and detailed reporting for complex analyses.
 
 ## Security and confirmation
 
-Many tools, especially those that can modify your file system or execute commands (`write_file`, `edit`, `run_shell_command`), are designed with safety in mind. The Gemini CLI will typically:
+Many tools, especially those that can modify your file system or execute commands (`write_file`, `edit`, `run_shell_command`), are designed with safety in mind. The Soul CLI will typically:
 
 - **Require confirmation:** Prompt you before executing potentially sensitive operations, showing you what action is about to be taken.
-- **Utilize sandboxing:** All tools are subject to restrictions enforced by sandboxing (see [Sandboxing in the Gemini CLI](../sandbox.md)). This means that when operating in a sandbox, any tools (including MCP servers) you wish to use must be available _inside_ the sandbox environment. For example, to run an MCP server through `npx`, the `npx` executable must be installed within the sandbox's Docker image or be available in the `sandbox-exec` environment.
+- **Utilize sandboxing:** All tools are subject to restrictions enforced by sandboxing (see [Sandboxing in the Soul CLI](../sandbox.md)). This means that when operating in a sandbox, any tools (including MCP servers) you wish to use must be available _inside_ the sandbox environment. For example, to run an MCP server through `npx`, the `npx` executable must be installed within the sandbox's Docker image or be available in the `sandbox-exec` environment.
 
 It's important to always review confirmation prompts carefully before allowing a tool to proceed.
 
-## Learn more about Gemini CLI's tools
+## Learn more about Soul CLI's enterprise tools
 
-Gemini CLI's built-in tools can be broadly categorized as follows:
+Soul CLI's 26+ enterprise tools are organized into specialized categories:
 
-- **[File System Tools](./file-system.md):** For interacting with files and directories (reading, writing, listing, searching, etc.).
-- **[Shell Tool](./shell.md) (`run_shell_command`):** For executing shell commands.
-- **[Web Fetch Tool](./web-fetch.md) (`web_fetch`):** For retrieving content from URLs.
-- **[Web Search Tool](./web-search.md) (`web_search`):** For searching the web.
-- **[Multi-File Read Tool](./multi-file.md) (`read_many_files`):** A specialized tool for reading content from multiple files or directories, often used by the `@` command.
-- **[Memory Tool](./memory.md) (`save_memory`):** For saving and recalling information across sessions.
+### Code Intelligence Tools
+- **TreeSitter Parser** (`tree_sitter`): AST-based code parsing and symbol extraction for TypeScript, JavaScript, Python
+- **Code RAG Search** (`code_rag`): Semantic code search with natural language queries and persistent caching
+- **Repository Map** (`repo_map`): Automated codebase analysis with architecture pattern detection
+- **Code Analysis** (`code_analysis`): Deep quality assessment with security, performance, and maintainability insights
+
+### Development Workflow Tools
+- **Multi Edit** (`multi_edit`): Atomic batch operations across multiple files with conflict detection and rollback
+- **Git Operations** (`git_ops`): Comprehensive Git workflow management with intelligent conflict detection
+- **Test Generation** (`test_generator`): Automated test creation for Jest, Vitest, Cypress, Playwright, and more
+- **Notebook Edit** (`notebook_edit`): Full Jupyter notebook editing with cell operations and metadata management
+
+### Autonomous Execution Tools
+- **Task Agent** (`task`): Deploy separate agent processes with full tool access for complex multi-step operations
+- **Plan Mode** (`plan_mode`): Structured thinking and ideation phases for complex problem-solving
+- **Todo Management** (`todo_write`, `todo_read`): Advanced task tracking with persistent storage and progress monitoring
+
+### Design & UX Tools
+- **UI Design Master** (`ui_design_master`): Mathematical design optimization using golden ratio principles and minimalist aesthetics
+- **Behavioral Science Analyzer** (`behavioral_science_analyzer`): UX optimization using psychological frameworks and behavioral modeling
+
+### Research & Intelligence Tools
+- **Technical Research Advisor** (`technical_research_advisor`): Multi-source research across GitHub, arXiv, Semantic Scholar, Stack Overflow
+- **[File System Tools](./file-system.md):** Enhanced file operations with intelligent caching and change detection
+- **[Web Fetch Tool](./web-fetch.md) (`web_fetch`):** Advanced web content retrieval with AI processing
+- **[Web Search Tool](./web-search.md) (`web_search`):** Intelligent web search with result synthesis
+- **[Memory Tool](./memory.md) (`save_memory`):** Cross-session information persistence with intelligent retrieval
 
 Additionally, these tools incorporate:
 

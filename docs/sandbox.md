@@ -1,10 +1,10 @@
-# Sandboxing in the Gemini CLI
+# Sandboxing in the Soul CLI
 
-This document provides a guide to sandboxing in the Gemini CLI, including prerequisites, quickstart, and configuration.
+This document provides a guide to sandboxing in the Soul CLI, including prerequisites, quickstart, and configuration.
 
 ## Prerequisites
 
-Before using sandboxing, you need to install and set up the Gemini CLI:
+Before using sandboxing, you need to install and set up the Soul CLI:
 
 ```bash
 # install gemini-cli with npm
