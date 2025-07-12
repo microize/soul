@@ -15,7 +15,9 @@
       "Bash(npx eslint:*)",
       "Bash(rm:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

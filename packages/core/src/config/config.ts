@@ -30,6 +30,7 @@ import { WebSearchTool } from '../tools/web-search.js';
 import { NotebookEditTool } from '../tools/notebook-edit.js';
 import { PlanModeTool } from '../tools/plan-mode.js';
 import { TodoWriteTool } from '../tools/todo-write.js';
+import { TodoReadTool } from '../tools/todo-read.js';
 import { GitOperationsTool } from '../tools/git-operations.js';
 import { CodeAnalysisTool } from '../tools/code-analysis.js';
 import { TestGenerationTool } from '../tools/test-generation.js';
@@ -656,6 +657,7 @@ export class Config {
     registerCoreTool(NotebookEditTool, this);
     registerCoreTool(PlanModeTool, this, undefined);
     registerCoreTool(TodoWriteTool, this);
+    registerCoreTool(TodoReadTool, this);
     registerCoreTool(GitOperationsTool, this);
     registerCoreTool(CodeAnalysisTool, this);
     registerCoreTool(TestGenerationTool, this);
