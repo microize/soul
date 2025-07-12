@@ -40,6 +40,103 @@ export function isTelemetrySdkInitialized(): boolean {
   return telemetryInitialized;
 }
 
+/**
+ * Validates if hostname is in private IP range
+ * SECURITY: Prevents telemetry data exfiltration to private networks
+ */
+function isPrivateIP(hostname: string): boolean {
+  // Check for IPv4 private ranges
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = hostname.match(ipv4Regex);
+  
+  if (ipv4Match) {
+    const octets = ipv4Match.slice(1).map(Number);
+    
+    // 10.0.0.0/8
+    if (octets[0] === 10) return true;
+    
+    // 172.16.0.0/12
+    if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+    
+    // 192.168.0.0/16
+    if (octets[0] === 192 && octets[1] === 168) return true;
+    
+    // 169.254.0.0/16 (Link-local)
+    if (octets[0] === 169 && octets[1] === 254) return true;
+  }
+  
+  // Check for IPv6 private ranges (simplified)
+  if (hostname.includes(':')) {
+    const lowerHostname = hostname.toLowerCase();
+    // fc00::/7 (Unique local addresses)
+    if (lowerHostname.startsWith('fc') || lowerHostname.startsWith('fd')) return true;
+    // fe80::/10 (Link-local)
+    if (lowerHostname.startsWith('fe8') || lowerHostname.startsWith('fe9') || 
+        lowerHostname.startsWith('fea') || lowerHostname.startsWith('feb')) return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Validates telemetry endpoint for security
+ * SECURITY: Prevents malicious telemetry endpoints and data exfiltration
+ */
+function isValidTelemetryEndpoint(url: URL): boolean {
+  // Only allow https and http protocols
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    return false;
+  }
+  
+  // Validate hostname is not empty
+  if (!url.hostname) {
+    return false;
+  }
+  
+  const hostname = url.hostname.toLowerCase();
+  
+  // Block localhost for security (telemetry should go to external endpoints)
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+    return false;
+  }
+  
+  // Block private IP ranges for security
+  if (isPrivateIP(hostname)) {
+    return false;
+  }
+  
+  // Validate port if specified
+  if (url.port) {
+    const port = parseInt(url.port, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      return false;
+    }
+  }
+  
+  // Allowlist trusted telemetry domains for added security
+  const trustedDomains = [
+    'googleapis.com',
+    'google.com',
+    'otel.io',
+    'opentelemetry.io',
+    'jaegertracing.io',
+    'honeycomb.io',
+    'datadoghq.com',
+    'newrelic.com'
+  ];
+  
+  const isFromTrustedDomain = trustedDomains.some(domain => 
+    hostname === domain || hostname.endsWith('.' + domain)
+  );
+  
+  if (!isFromTrustedDomain) {
+    diag.warn(`Telemetry endpoint not in trusted domain list: ${hostname}`);
+    // Allow but warn for custom endpoints
+  }
+  
+  return true;
+}
+
 function parseGrpcEndpoint(
   otlpEndpointSetting: string | undefined,
 ): string | undefined {
@@ -51,6 +148,13 @@ function parseGrpcEndpoint(
 
   try {
     const url = new URL(trimmedEndpoint);
+    
+    // SECURITY: Validate telemetry endpoint for security
+    if (!isValidTelemetryEndpoint(url)) {
+      diag.error('Telemetry endpoint failed security validation:', trimmedEndpoint);
+      return undefined;
+    }
+    
     // OTLP gRPC exporters expect an endpoint in the format scheme://host:port
     // The `origin` property provides this, stripping any path, query, or hash.
     return url.origin;

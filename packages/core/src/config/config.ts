@@ -454,7 +454,98 @@ export class Config {
   }
 
   getProxy(): string | undefined {
+    if (!this.proxy) {
+      return undefined;
+    }
+    
+    // SECURITY: Validate proxy URL to prevent malicious configurations
+    if (!this.isValidProxyUrl(this.proxy)) {
+      console.warn(`Invalid proxy URL configured: ${this.proxy}. Proxy disabled for security.`);
+      return undefined;
+    }
+    
     return this.proxy;
+  }
+
+  /**
+   * Validates proxy URL for security
+   * SECURITY: Prevents malicious proxy configurations
+   */
+  private isValidProxyUrl(proxyUrl: string): boolean {
+    try {
+      const url = new URL(proxyUrl);
+      
+      // Only allow http and https protocols
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        return false;
+      }
+      
+      // Validate hostname is not empty
+      if (!url.hostname) {
+        return false;
+      }
+      
+      // Block localhost and private networks for security
+      const hostname = url.hostname.toLowerCase();
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        return false;
+      }
+      
+      // Block private IP ranges
+      if (this.isPrivateIP(hostname)) {
+        return false;
+      }
+      
+      // Validate port if specified
+      if (url.port) {
+        const port = parseInt(url.port, 10);
+        if (isNaN(port) || port < 1 || port > 65535) {
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  /**
+   * Checks if hostname is in private IP range
+   * SECURITY: Prevents proxy to private networks
+   */
+  private isPrivateIP(hostname: string): boolean {
+    // Check for IPv4 private ranges
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const ipv4Match = hostname.match(ipv4Regex);
+    
+    if (ipv4Match) {
+      const octets = ipv4Match.slice(1).map(Number);
+      
+      // 10.0.0.0/8
+      if (octets[0] === 10) return true;
+      
+      // 172.16.0.0/12
+      if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+      
+      // 192.168.0.0/16
+      if (octets[0] === 192 && octets[1] === 168) return true;
+      
+      // 169.254.0.0/16 (Link-local)
+      if (octets[0] === 169 && octets[1] === 254) return true;
+    }
+    
+    // Check for IPv6 private ranges (simplified)
+    if (hostname.includes(':')) {
+      const lowerHostname = hostname.toLowerCase();
+      // fc00::/7 (Unique local addresses)
+      if (lowerHostname.startsWith('fc') || lowerHostname.startsWith('fd')) return true;
+      // fe80::/10 (Link-local)
+      if (lowerHostname.startsWith('fe8') || lowerHostname.startsWith('fe9') || 
+          lowerHostname.startsWith('fea') || lowerHostname.startsWith('feb')) return true;
+    }
+    
+    return false;
   }
 
   getWorkingDir(): string {

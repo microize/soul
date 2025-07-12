@@ -116,13 +116,25 @@ Process Group PGID: Process group started or \`(none)\``,
    * @returns An object with 'allowed' boolean and optional 'reason' string if not allowed
    */
   isCommandAllowed(command: string): { allowed: boolean; reason?: string } {
-    // 0. Disallow command substitution
-    if (command.includes('$(')) {
-      return {
-        allowed: false,
-        reason:
-          'Command substitution using $() is not allowed for security reasons',
-      };
+    // 0. Disallow command substitution and injection patterns
+    const dangerousPatterns = [
+      { pattern: /\$\(/, reason: 'Command substitution using $() is not allowed' },
+      { pattern: /`/, reason: 'Command substitution using backticks is not allowed' },
+      { pattern: /\$\{/, reason: 'Variable substitution using ${} is not allowed' },
+      { pattern: /;\s*[a-zA-Z]/, reason: 'Command chaining using semicolons is not allowed' },
+      { pattern: /\|\s*[a-zA-Z]/, reason: 'Command piping to executables is not allowed' },
+      { pattern: /&\s*[a-zA-Z]/, reason: 'Background command execution is not allowed' },
+      { pattern: /\|\|/, reason: 'Conditional command execution using || is not allowed' },
+      { pattern: /&&/, reason: 'Conditional command execution using && is not allowed' },
+    ];
+
+    for (const { pattern, reason } of dangerousPatterns) {
+      if (pattern.test(command)) {
+        return {
+          allowed: false,
+          reason: `${reason} for security reasons`,
+        };
+      }
     }
 
     const SHELL_TOOL_NAMES = [ShellTool.name, ShellTool.Name];

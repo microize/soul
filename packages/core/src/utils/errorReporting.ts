@@ -16,6 +16,45 @@ interface ErrorReportData {
 }
 
 /**
+ * Sanitizes context data to prevent sensitive information disclosure
+ * @param context The context data to sanitize
+ * @returns Sanitized context data
+ */
+function sanitizeContext(context: unknown): unknown {
+  if (context === null || context === undefined) {
+    return context;
+  }
+  
+  if (typeof context === 'string') {
+    // Redact potential sensitive patterns
+    return context
+      .replace(/([a-zA-Z0-9_-]+)(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '[EMAIL_REDACTED]')
+      .replace(/\b[A-Za-z0-9]{20,}\b/g, '[TOKEN_REDACTED]')
+      .replace(/\b(?:password|token|secret|key|auth)[\s=:]*[\w\-]{8,}\b/gi, '[CREDENTIAL_REDACTED]')
+      .replace(/\b(?:sk|pk)_[a-zA-Z0-9]{20,}\b/g, '[API_KEY_REDACTED]');
+  }
+  
+  if (Array.isArray(context)) {
+    return context.map(item => sanitizeContext(item));
+  }
+  
+  if (typeof context === 'object' && context !== null) {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(context)) {
+      // Redact sensitive keys
+      if (/^(password|token|secret|key|auth|credential|api_key)$/i.test(key)) {
+        sanitized[key] = '[REDACTED]';
+      } else {
+        sanitized[key] = sanitizeContext(value);
+      }
+    }
+    return sanitized;
+  }
+  
+  return context;
+}
+
+/**
  * Generates an error report, writes it to a temporary file, and logs information to console.error.
  * @param error The error object.
  * @param context The relevant context (e.g., chat history, request contents).
@@ -34,7 +73,10 @@ export async function reportError(
 
   let errorToReport: { message: string; stack?: string };
   if (error instanceof Error) {
-    errorToReport = { message: error.message, stack: error.stack };
+    errorToReport = { 
+      message: error.message, 
+      stack: error.stack ? sanitizeContext(error.stack) as string : undefined
+    };
   } else if (
     typeof error === 'object' &&
     error !== null &&
@@ -50,7 +92,7 @@ export async function reportError(
   const reportContent: ErrorReportData = { error: errorToReport };
 
   if (context) {
-    reportContent.context = context;
+    reportContent.context = sanitizeContext(context);
   }
 
   let stringifiedReportContent: string;

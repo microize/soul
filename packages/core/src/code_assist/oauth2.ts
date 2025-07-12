@@ -182,7 +182,7 @@ async function authWithUserCode(client: OAuth2Client): Promise<boolean> {
     console.error('Authorization code is required.');
     return false;
   } else {
-    console.error(`Received authorization code: "${code}"`);
+    console.error('Received authorization code');
   }
 
   try {
@@ -291,13 +291,91 @@ export function getAvailablePort(): Promise<number> {
   });
 }
 
+/**
+ * Generates a deterministic encryption key based on machine and user context
+ * SECURITY: Uses system-specific entropy for credential encryption
+ */
+function getEncryptionKey(): Buffer {
+  const machineId = os.hostname() + os.userInfo().username;
+  const salt = 'gemini-cli-credential-salt-v1';
+  return crypto.pbkdf2Sync(machineId, salt, 100000, 32, 'sha256');
+}
+
+/**
+ * Encrypts credential data for secure storage
+ * SECURITY: AES-256-GCM encryption with authentication
+ */
+function encryptCredentials(data: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipher('aes-256-gcm', key);
+  cipher.setAAD(iv); // Use IV as additional authenticated data
+  
+  let encrypted = cipher.update(data, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Return: iv + authTag + encrypted (all hex encoded)
+  return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+}
+
+/**
+ * Decrypts credential data from secure storage
+ * SECURITY: Verifies authentication tag before decryption
+ */
+function decryptCredentials(encryptedData: string): string {
+  const key = getEncryptionKey();
+  const parts = encryptedData.split(':');
+  
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted data format');
+  }
+  
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  
+  const decipher = crypto.createDecipher('aes-256-gcm', key);
+  decipher.setAAD(iv); // Use IV as additional authenticated data
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
+
+/**
+ * Checks if credential data appears to be encrypted
+ */
+function isEncryptedFormat(data: string): boolean {
+  return data.includes(':') && !data.trim().startsWith('{');
+}
+
 async function loadCachedCredentials(client: OAuth2Client): Promise<boolean> {
   try {
     const keyFile =
       process.env.GOOGLE_APPLICATION_CREDENTIALS || getCachedCredentialPath();
 
-    const creds = await fs.readFile(keyFile, 'utf-8');
-    client.setCredentials(JSON.parse(creds));
+    const rawCreds = await fs.readFile(keyFile, 'utf-8');
+    
+    let credsString: string;
+    try {
+      // Try to decrypt if it appears to be encrypted
+      if (isEncryptedFormat(rawCreds)) {
+        credsString = decryptCredentials(rawCreds);
+      } else {
+        // Handle legacy plaintext credentials
+        credsString = rawCreds;
+      }
+    } catch (decryptError) {
+      // If decryption fails, treat as invalid credentials
+      console.warn('Failed to decrypt cached credentials, they may be corrupted');
+      return false;
+    }
+    
+    client.setCredentials(JSON.parse(credsString));
 
     // This will verify locally that the credentials look good.
     const { token } = await client.getAccessToken();
@@ -319,7 +397,9 @@ async function cacheCredentials(credentials: Credentials) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const credString = JSON.stringify(credentials, null, 2);
-  await fs.writeFile(filePath, credString);
+  // SECURITY: Encrypt credentials before storing to disk
+  const encryptedCreds = encryptCredentials(credString);
+  await fs.writeFile(filePath, encryptedCreds);
 }
 
 function getCachedCredentialPath(): string {

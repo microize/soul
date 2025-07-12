@@ -101,15 +101,36 @@ export class WriteFileTool
    * @returns True if the path is within the root directory, false otherwise
    */
   private isWithinRoot(pathToCheck: string): boolean {
-    const normalizedPath = path.normalize(pathToCheck);
-    const normalizedRoot = path.normalize(this.config.getTargetDir());
-    const rootWithSep = normalizedRoot.endsWith(path.sep)
-      ? normalizedRoot
-      : normalizedRoot + path.sep;
-    return (
-      normalizedPath === normalizedRoot ||
-      normalizedPath.startsWith(rootWithSep)
-    );
+    try {
+      // Use realpath to resolve symlinks and normalize the path
+      const realPath = fs.realpathSync(pathToCheck);
+      const realRoot = fs.realpathSync(this.config.getTargetDir());
+      const rootWithSep = realRoot.endsWith(path.sep)
+        ? realRoot
+        : realRoot + path.sep;
+      return (
+        realPath === realRoot ||
+        realPath.startsWith(rootWithSep)
+      );
+    } catch (_error) {
+      // If realpath fails (e.g., file doesn't exist), check with normalized paths
+      // but still validate against path traversal patterns
+      const normalizedPath = path.normalize(pathToCheck);
+      const normalizedRoot = path.normalize(this.config.getTargetDir());
+      
+      // Check for path traversal patterns
+      if (normalizedPath.includes('../') || normalizedPath.includes('..\\')) {
+        return false;
+      }
+      
+      const rootWithSep = normalizedRoot.endsWith(path.sep)
+        ? normalizedRoot
+        : normalizedRoot + path.sep;
+      return (
+        normalizedPath === normalizedRoot ||
+        normalizedPath.startsWith(rootWithSep)
+      );
+    }
   }
 
   validateToolParams(params: WriteFileToolParams): string | null {

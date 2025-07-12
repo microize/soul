@@ -28,7 +28,12 @@ export async function getEffectiveModel(
 
   const modelToTest = DEFAULT_GEMINI_MODEL;
   const fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTest}:generateContent?key=${apiKey}`;
+  
+  // Validate and sanitize model name to prevent URL injection
+  const sanitizedModel = encodeURIComponent(modelToTest);
+  const sanitizedApiKey = encodeURIComponent(apiKey);
+  
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${sanitizedModel}:generateContent?key=${sanitizedApiKey}`;
   const body = JSON.stringify({
     contents: [{ parts: [{ text: 'test' }] }],
     generationConfig: {

@@ -49,14 +49,58 @@ export type ContentGeneratorConfig = {
   authType?: AuthType | undefined;
 };
 
+/**
+ * Validates and sanitizes environment variable values
+ * SECURITY: Prevents injection attacks via environment variables
+ */
+function validateEnvironmentVariable(value: string | undefined, varName: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  // Basic validation - no control characters or null bytes
+  if (/[\x00-\x1f\x7f]/.test(value)) {
+    console.warn(`Environment variable ${varName} contains invalid characters and will be ignored`);
+    return undefined;
+  }
+
+  // Validate specific patterns for known environment variables
+  switch (varName) {
+    case 'GEMINI_API_KEY':
+    case 'GOOGLE_API_KEY':
+      // API keys should be alphanumeric with specific patterns
+      if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length < 10) {
+        console.warn(`Environment variable ${varName} has invalid format and will be ignored`);
+        return undefined;
+      }
+      break;
+    case 'GOOGLE_CLOUD_PROJECT':
+      // Project IDs have specific format requirements
+      if (!/^[a-z0-9-]+$/.test(value) || value.length > 63) {
+        console.warn(`Environment variable ${varName} has invalid format and will be ignored`);
+        return undefined;
+      }
+      break;
+    case 'GOOGLE_CLOUD_LOCATION':
+      // Location should be a valid region format
+      if (!/^[a-z0-9-]+$/.test(value)) {
+        console.warn(`Environment variable ${varName} has invalid format and will be ignored`);
+        return undefined;
+      }
+      break;
+  }
+
+  return value.trim();
+}
+
 export async function createContentGeneratorConfig(
   model: string | undefined,
   authType: AuthType | undefined,
 ): Promise<ContentGeneratorConfig> {
-  const geminiApiKey = process.env.GEMINI_API_KEY || undefined;
-  const googleApiKey = process.env.GOOGLE_API_KEY || undefined;
-  const googleCloudProject = process.env.GOOGLE_CLOUD_PROJECT || undefined;
-  const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
+  const geminiApiKey = validateEnvironmentVariable(process.env.GEMINI_API_KEY, 'GEMINI_API_KEY');
+  const googleApiKey = validateEnvironmentVariable(process.env.GOOGLE_API_KEY, 'GOOGLE_API_KEY');
+  const googleCloudProject = validateEnvironmentVariable(process.env.GOOGLE_CLOUD_PROJECT, 'GOOGLE_CLOUD_PROJECT');
+  const googleCloudLocation = validateEnvironmentVariable(process.env.GOOGLE_CLOUD_LOCATION, 'GOOGLE_CLOUD_LOCATION');
 
   // Use runtime model from config if available, otherwise fallback to parameter or default
   const effectiveModel = model || DEFAULT_GEMINI_MODEL;

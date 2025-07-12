@@ -206,6 +206,13 @@ export class TestGenerationTool extends BaseTool<TestGenerationToolParams, ToolR
       return `Source path does not exist: ${params.source_path}`;
     }
 
+    // CRITICAL SECURITY FIX: Validate output_dir to prevent arbitrary file write
+    if (params.output_dir !== undefined) {
+      if (!this.isValidOutputDir(params.output_dir)) {
+        return `Output directory must be within the project root and cannot contain path traversal sequences: ${params.output_dir}`;
+      }
+    }
+
     // Validate coverage target
     if (params.coverage_target !== undefined) {
       if (params.coverage_target < 0 || params.coverage_target > 100) {
@@ -215,6 +222,60 @@ export class TestGenerationTool extends BaseTool<TestGenerationToolParams, ToolR
 
     return null;
   }
+
+  /**
+   * Validates that the output directory is safe and within project bounds
+   * CRITICAL SECURITY: Prevents arbitrary file write attacks
+   */
+  private isValidOutputDir(outputDir: string): boolean {
+    try {
+      // Prevent absolute paths that could write outside project
+      if (path.isAbsolute(outputDir)) {
+        return false;
+      }
+
+      // Check for path traversal patterns
+      const normalizedPath = path.normalize(outputDir);
+      if (normalizedPath.includes('../') || normalizedPath.includes('..\\')) {
+        return false;
+      }
+
+      // Resolve the full path relative to project root
+      const projectRoot = path.resolve(this.config.getTargetDir());
+      const fullPath = path.resolve(projectRoot, outputDir);
+
+      // Use realpath to resolve symlinks and ensure it's within project bounds
+      try {
+        const realPath = fs.realpathSync(fullPath);
+        const realRoot = fs.realpathSync(projectRoot);
+        const rootWithSep = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+        
+        return realPath === realRoot || realPath.startsWith(rootWithSep);
+      } catch (realpathError) {
+        // If realpath fails (path doesn't exist yet), validate the normalized path
+        const rootWithSep = projectRoot.endsWith(path.sep) ? projectRoot : projectRoot + path.sep;
+        return fullPath === projectRoot || fullPath.startsWith(rootWithSep);
+      }
+    } catch (_error) {
+      // Any error in validation should be treated as invalid
+      return false;
+    }
+  }
+
+  /**
+   * Gets a validated output directory, falling back to default if not provided or invalid
+   * CRITICAL SECURITY: Ensures output directory is always safe
+   */
+  private getValidatedOutputDir(outputDir: string | undefined, framework: TestFramework): string {
+    if (outputDir && this.isValidOutputDir(outputDir)) {
+      // Return the validated relative path resolved to project root
+      return path.resolve(this.config.getTargetDir(), outputDir);
+    }
+    
+    // Fall back to safe default within project root
+    return this.getDefaultOutputDir(framework);
+  }
+
 
   getDescription(params: TestGenerationToolParams): string {
     const testType = params.test_type;
@@ -239,7 +300,7 @@ export class TestGenerationTool extends BaseTool<TestGenerationToolParams, ToolR
         : path.join(this.config.getTargetDir(), params.source_path);
 
       const framework = params.framework || await this.detectFramework();
-      const outputDir = params.output_dir || this.getDefaultOutputDir(framework);
+      const outputDir = this.getValidatedOutputDir(params.output_dir, framework);
 
       const testContent = await this.generateTests(sourcePath, params, framework);
       const testFilePath = await this.writeTestFile(sourcePath, testContent, outputDir, framework);

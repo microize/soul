@@ -168,7 +168,21 @@ Use this tool for complex tasks that require multiple steps, tool coordination, 
       if (path.isAbsolute(params.working_directory)) {
         return 'Working directory must be relative to project root';
       }
+      
+      // Check for path traversal attempts
+      const normalizedPath = path.normalize(params.working_directory);
+      if (normalizedPath.includes('../') || normalizedPath.includes('..\\')) {
+        return 'Working directory cannot contain path traversal sequences';
+      }
+      
       const fullPath = path.resolve(this.config.getTargetDir(), params.working_directory);
+      
+      // Ensure the resolved path is still within the project root
+      const projectRoot = path.resolve(this.config.getTargetDir());
+      if (!fullPath.startsWith(projectRoot + path.sep) && fullPath !== projectRoot) {
+        return 'Working directory must be within project root';
+      }
+      
       if (!fs.existsSync(fullPath)) {
         return `Working directory does not exist: ${params.working_directory}`;
       }
@@ -469,11 +483,20 @@ The agent will run with full tool access (subject to filtering) and can make cha
       args = ['ts-node', '--transpile-only', agentScript];
     }
 
+    // Sanitize environment variables to prevent injection
+    const sanitizedEnv = { ...process.env };
+    
+    // Remove potentially dangerous environment variables
+    delete sanitizedEnv.LD_PRELOAD;
+    delete sanitizedEnv.LD_LIBRARY_PATH;
+    delete sanitizedEnv.DYLD_INSERT_LIBRARIES;
+    delete sanitizedEnv.DYLD_LIBRARY_PATH;
+    
     const agentProcess = spawn(command, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: config.targetDir,
       env: {
-        ...process.env,
+        ...sanitizedEnv,
         TASK_AGENT_MODE: 'true',
         NODE_PATH: process.env.NODE_PATH,
       },
