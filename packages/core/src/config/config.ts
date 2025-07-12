@@ -5,6 +5,7 @@
  */
 
 import * as path from 'node:path';
+import * as fs from 'node:fs';
 import process from 'node:process';
 import {
   AuthType,
@@ -31,6 +32,7 @@ import { NotebookEditTool } from '../tools/notebook-edit.js';
 import { PlanModeTool } from '../tools/plan-mode.js';
 import { TodoWriteTool } from '../tools/todo-write.js';
 import { TodoReadTool } from '../tools/todo-read.js';
+import { RepoMapTool } from '../tools/repo-map.js';
 import { GitOperationsTool } from '../tools/git-operations.js';
 import { CodeAnalysisTool } from '../tools/code-analysis.js';
 import { TestGenerationTool } from '../tools/test-generation.js';
@@ -55,6 +57,11 @@ import {
   DEFAULT_GEMINI_FLASH_MODEL,
 } from './models.js';
 import { ClearcutLogger } from '../telemetry/clearcut-logger/clearcut-logger.js';
+import { 
+  StartupProgressManager, 
+  StartupProgressCallback, 
+  StartupPhase 
+} from '../utils/startupProgress.js';
 
 export enum ApprovalMode {
   DEFAULT = 'default',
@@ -153,6 +160,14 @@ export interface ConfigParameters {
   listExtensions?: boolean;
   activeExtensions?: ActiveExtension[];
   noBrowser?: boolean;
+  cache?: {
+    enabled?: boolean;
+    directory?: string;
+    maxAge?: number;
+    maxMemoryEntries?: number;
+    enableFileHashing?: boolean;
+  };
+  startupProgressCallback?: StartupProgressCallback;
 }
 
 export class Config {
@@ -197,6 +212,7 @@ export class Config {
   private readonly _activeExtensions: ActiveExtension[];
   flashFallbackHandler?: FlashFallbackHandler;
   private quotaErrorOccurred: boolean = false;
+  private startupProgressManager: StartupProgressManager;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -242,6 +258,11 @@ export class Config {
     this._activeExtensions = params.activeExtensions ?? [];
     this.noBrowser = params.noBrowser ?? false;
 
+    // Initialize startup progress manager
+    this.startupProgressManager = params.startupProgressCallback 
+      ? new StartupProgressManager(params.startupProgressCallback)
+      : StartupProgressManager.createSilent();
+
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
     }
@@ -260,16 +281,31 @@ export class Config {
   }
 
   async initialize(): Promise<void> {
+    this.startupProgressManager.startPhase(
+      StartupPhase.INITIALIZING,
+      StartupProgressManager.getPhaseMessage(StartupPhase.INITIALIZING)
+    );
+
     // Initialize centralized FileDiscoveryService
+    this.startupProgressManager.updateProgress('Setting up file discovery service', 20);
     this.getFileService();
+    
     if (this.getCheckpointingEnabled()) {
+      this.startupProgressManager.updateProgress('Initializing Git service', 40);
       try {
         await this.getGitService();
       } catch {
         // For now swallow the error, later log it.
       }
     }
+
+    this.startupProgressManager.updateProgress('Preparing tool registry', 60);
+    this.startupProgressManager.completePhase('Configuration initialized');
+
+    // Tool registry initialization will be handled in createToolRegistry
     this.toolRegistry = await this.createToolRegistry();
+    
+    this.startupProgressManager.complete();
   }
 
   async refreshAuth(authMethod: AuthType) {
@@ -325,6 +361,10 @@ export class Config {
 
   getQuotaErrorOccurred(): boolean {
     return this.quotaErrorOccurred;
+  }
+
+  getStartupProgressManager(): StartupProgressManager {
+    return this.startupProgressManager;
   }
 
   getEmbeddingModel(): string {
@@ -593,6 +633,12 @@ export class Config {
   }
 
   async refreshMemory(): Promise<{ memoryContent: string; fileCount: number }> {
+    this.startupProgressManager.startPhase(
+      StartupPhase.LOADING_MEMORY,
+      StartupProgressManager.getPhaseMessage(StartupPhase.LOADING_MEMORY)
+    );
+
+    this.startupProgressManager.updateProgress('Scanning for CLAUDE.md files', 20);
     const { memoryContent, fileCount } = await loadServerHierarchicalMemory(
       this.getWorkingDir(),
       this.getDebugMode(),
@@ -600,15 +646,33 @@ export class Config {
       this.getExtensionContextFilePaths(),
     );
 
+    this.startupProgressManager.updateProgress('Processing memory content', 80);
     this.setUserMemory(memoryContent);
     this.setGeminiMdFileCount(fileCount);
 
+    this.startupProgressManager.completePhase(`Loaded ${fileCount} memory files`);
     return { memoryContent, fileCount };
   }
 
   async createToolRegistry(): Promise<ToolRegistry> {
+    this.startupProgressManager.startPhase(
+      StartupPhase.INITIALIZING_TOOLS,
+      StartupProgressManager.getPhaseMessage(StartupPhase.INITIALIZING_TOOLS)
+    );
+
     const registry = new ToolRegistry(this);
     const targetDir = this.getTargetDir();
+
+    // List of all core tools for progress tracking
+    const allCoreTools = [
+      LSTool, ReadFileTool, GrepTool, GlobTool, EditTool, WriteFileTool,
+      WebFetchTool, ReadManyFilesTool, ShellTool, MemoryTool, WebSearchTool,
+      NotebookEditTool, PlanModeTool, TodoWriteTool, TodoReadTool, RepoMapTool,
+      GitOperationsTool, CodeAnalysisTool, TestGenerationTool, TreeSitterTool,
+      CodeRAGTool, MultiEditTool, TaskTool
+    ];
+
+    let registeredTools = 0;
 
     // helper to create & register core tools that are enabled
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -641,6 +705,14 @@ export class Config {
       if (isEnabled) {
         registry.registerTool(new ToolClass(...args));
       }
+
+      // Update progress
+      registeredTools++;
+      const progress = Math.round((registeredTools / allCoreTools.length) * 80); // 80% for core tools
+      this.startupProgressManager.updateProgress(
+        `Registered ${toolName || className}`,
+        progress
+      );
     };
 
     registerCoreTool(LSTool, targetDir, this);
@@ -658,6 +730,7 @@ export class Config {
     registerCoreTool(PlanModeTool, this, undefined);
     registerCoreTool(TodoWriteTool, this);
     registerCoreTool(TodoReadTool, this);
+    registerCoreTool(RepoMapTool, this);
     registerCoreTool(GitOperationsTool, this);
     registerCoreTool(CodeAnalysisTool, this);
     registerCoreTool(TestGenerationTool, this);
@@ -666,7 +739,24 @@ export class Config {
     registerCoreTool(MultiEditTool, this);
     registerCoreTool(TaskTool, this);
 
+    this.startupProgressManager.updateProgress('Discovering additional tools', 85);
     await registry.discoverTools();
+    
+    // Initialize cache system
+    this.startupProgressManager.startPhase(
+      StartupPhase.SETTING_UP_CACHE,
+      StartupProgressManager.getPhaseMessage(StartupPhase.SETTING_UP_CACHE)
+    );
+    
+    this.startupProgressManager.updateProgress('Creating cache directories', 50);
+    // Ensure cache directory exists
+    const cacheDir = path.join(this.getProjectTempDir(), '.soul-cache');
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    
+    this.startupProgressManager.completePhase('Cache system ready');
+    this.startupProgressManager.completePhase('Tools initialized');
     return registry;
   }
 }

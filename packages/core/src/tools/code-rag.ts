@@ -9,6 +9,7 @@ import { BaseTool, ToolResult } from './tools.js';
 import { Type } from '@google/genai';
 import { SchemaValidator } from '../utils/schemaValidator.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { PersistentCache } from '../utils/persistentCache.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { glob } from 'glob';
@@ -182,6 +183,7 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
   private readonly config: Config;
   private readonly codeIndex: Map<string, IndexEntry> = new Map();
   private readonly embeddingCache: Map<string, number[]> = new Map();
+  private readonly persistentCache: PersistentCache<IndexEntry[]>;
   static readonly Name = 'code_rag';
 
   constructor(config: Config) {
@@ -247,6 +249,12 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
       }
     );
     this.config = config;
+    this.persistentCache = new PersistentCache<IndexEntry[]>('code-rag', {
+      cacheDir: path.join(config.getTargetDir(), '.soul-cache'),
+      maxMemoryEntries: 50,
+      maxFileAge: 24 * 60 * 60 * 1000, // 24 hours
+      enableFileHashing: true,
+    });
   }
 
   validateToolParams(params: CodeRAGToolParams): string | null {
@@ -388,37 +396,52 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     // File patterns for different languages
     const patterns = this.getFilePatterns(params.languages);
     
+    // Collect all files first
+    const allFiles: string[] = [];
     for (const pattern of patterns) {
       const files = await glob(pattern, { 
         cwd: basePath,
         absolute: true,
         ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
       });
+      allFiles.push(...files);
+    }
 
-      for (const filePath of files) {
-        try {
-          await this.indexFile(filePath);
-        } catch (_error) {
-          // Skip files that can't be read or parsed
-          continue;
-        }
+    // Check for changed files and invalidate cache entries
+    const changedFiles = this.persistentCache.getChangedFiles(allFiles);
+    for (const changedFile of changedFiles) {
+      await this.persistentCache.invalidate(changedFile);
+    }
+
+    // Index all files (using cache when available)
+    for (const filePath of allFiles) {
+      try {
+        await this.indexFile(filePath);
+      } catch (_error) {
+        // Skip files that can't be read or parsed
+        continue;
       }
     }
   }
 
   private async indexFile(filePath: string): Promise<void> {
+    // Check persistent cache first
+    const cachedEntries = await this.persistentCache.get(filePath);
+    if (cachedEntries && Array.isArray(cachedEntries)) {
+      // Load cached entries into memory index
+      for (const entry of cachedEntries) {
+        this.codeIndex.set(entry.id, entry);
+      }
+      return;
+    }
+
     const stats = fs.statSync(filePath);
     const content = fs.readFileSync(filePath, 'utf8');
     const language = this.detectLanguage(filePath);
     
-    // Check if file is already indexed and up to date
-    const existingEntry = this.codeIndex.get(filePath);
-    if (existingEntry && existingEntry.metadata.lastModified >= stats.mtime.getTime()) {
-      return;
-    }
-
     // Split content into meaningful chunks (functions, classes, etc.)
     const chunks = this.extractCodeChunks(content, language);
+    const entries: IndexEntry[] = [];
     
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
@@ -440,7 +463,11 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
       };
 
       this.codeIndex.set(id, entry);
+      entries.push(entry);
     }
+
+    // Cache the entries for this file
+    await this.persistentCache.set(filePath, entries);
   }
 
   private extractCodeChunks(content: string, language: CodeLanguage): CodeSnippet[] {
@@ -950,6 +977,11 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
       '',
     ];
 
+    // Add cache statistics
+    const cacheStats = this.persistentCache.getStats();
+    lines.push(`**Cache:** ${cacheStats.memoryEntries} in memory, ${cacheStats.diskEntries} on disk, ${cacheStats.totalFiles} total files tracked`);
+    lines.push('');
+
     if (context.languages.length > 0) {
       lines.push(`Languages: ${context.languages.join(', ')}`);
       lines.push('');
@@ -995,5 +1027,25 @@ export class CodeRAGTool extends BaseTool<CodeRAGToolParams, ToolResult> {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Clears the persistent cache for this tool
+   */
+  async clearCache(): Promise<void> {
+    await this.persistentCache.clear();
+    this.codeIndex.clear();
+  }
+
+  /**
+   * Gets cache statistics
+   */
+  getCacheStats(): {
+    memoryEntries: number;
+    diskEntries: number;
+    totalFiles: number;
+    cacheDir: string;
+  } {
+    return this.persistentCache.getStats();
   }
 }

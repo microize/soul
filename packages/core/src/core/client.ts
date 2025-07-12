@@ -39,6 +39,7 @@ import {
 } from './contentGenerator.js';
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
 import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
+import { StartupPhase } from '../utils/startupProgress.js';
 
 function isThinkingSupported(model: string) {
   if (model.startsWith('gemini-2.5')) return true;
@@ -146,6 +147,13 @@ export class GeminiClient {
   }
 
   private async getEnvironment(): Promise<Part[]> {
+    const progressManager = this.config.getStartupProgressManager();
+    
+    progressManager.startPhase(
+      StartupPhase.SCANNING_PROJECT,
+      'Scanning project structure'
+    );
+
     const cwd = this.config.getWorkingDir();
     const today = new Date().toLocaleDateString(undefined, {
       weekday: 'long',
@@ -154,27 +162,43 @@ export class GeminiClient {
       day: 'numeric',
     });
     const platform = process.platform;
+    
+    progressManager.updateProgress('Analyzing folder structure', 30);
     const folderStructure = await getFolderStructure(cwd, {
       fileService: this.config.getFileService(),
     });
+    progressManager.updateProgress('Building environment context', 60);
     const context = `
-  This is the Gemini CLI. We are setting up the context for our chat.
+  <system-reminder>This is the Soul CLI. We are setting up the context for our chat.
+  As you answer the user's questions, you can use the following context:
+  # CLAUDE.md
+  Codebase and user instructions are shown below. Be sure to adhere to these instructions. IMPORTANT: These instructions OVERRIDE any default behavior and you MUST follow them exactly as written.
+  
   Today's date is ${today}.
   My operating system is: ${platform}
   I'm currently working in the directory: ${cwd}
+  Cache location: ${cwd}/.soul-cache/
   ${folderStructure}
-          `.trim();
+  </system-reminder>`.trim();
 
     const initialParts: Part[] = [{ text: context }];
     const toolRegistry = await this.config.getToolRegistry();
 
+    progressManager.completePhase('Project structure analyzed');
+
     // Add full file context if the flag is set
     if (this.config.getFullContext()) {
+      progressManager.startPhase(
+        StartupPhase.LOADING_CONTEXT,
+        'Loading full project context'
+      );
       try {
+        progressManager.updateProgress('Finding read_many_files tool', 10);
         const readManyFilesTool = toolRegistry.getTool(
           'read_many_files',
         ) as ReadManyFilesTool;
         if (readManyFilesTool) {
+          progressManager.updateProgress('Reading project files', 30);
           // Read all files in the target directory
           const result = await readManyFilesTool.execute(
             {
@@ -183,6 +207,7 @@ export class GeminiClient {
             },
             AbortSignal.timeout(30000),
           );
+          progressManager.updateProgress('Processing file content', 80);
           if (result.llmContent) {
             initialParts.push({
               text: `\n--- Full File Context ---\n${result.llmContent}`,
@@ -197,12 +222,14 @@ export class GeminiClient {
             'Full context requested, but read_many_files tool not found.',
           );
         }
+        progressManager.completePhase('Full context loaded');
       } catch (error) {
         // Not using reportError here as it's a startup/config phase, not a chat/generation phase error.
         console.error('Error reading full file context:', error);
         initialParts.push({
           text: '\n--- Error reading full file context ---',
         });
+        progressManager.completePhase('Full context loading failed');
       }
     }
 

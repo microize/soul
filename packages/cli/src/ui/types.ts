@@ -14,6 +14,7 @@ export enum StreamingState {
   Idle = 'idle',
   Responding = 'responding',
   WaitingForConfirmation = 'waiting_for_confirmation',
+  StartupProgress = 'startup_progress',
 }
 
 // Copied from server/src/core/turn.ts for CLI usage
@@ -215,6 +216,15 @@ export interface ConsoleMessageItem {
   type: 'log' | 'warn' | 'error' | 'debug';
   content: string;
   count: number;
+}
+
+export interface StartupProgressEvent {
+  phase: string;
+  message: string;
+  percentage: number;
+  filesProcessed?: number;
+  totalFiles?: number;
+  estimatedTimeRemaining?: number;
 }
 
 /**
